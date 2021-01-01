@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" type="text/css" href="/style.css" media="all" />
+    <title>Sensor graph</title>
+    <link rel="shortcut icon" href="/favicon.ico" />
+  </head>
+  <body>
+    <div style="text-align:center;">
+      <b>AS7265 Spectroscopy</b>
+    </div>
+    <div class="chart-container" position: relative; height:350px; width:100%>
+      <canvas id="myChart" width="600" height="400"></canvas>
+    </div>
+    <br><br>
+    <script src = "/Chart.min.js"></script>  
+    <script>
+      const nms = [410,435,460,485,510,535,560,585,610,645,680,705,730,760,810,860,900,940];
+      const vCH = ['vA','vB','vC','vD','vE','vF','vG','vH','vR','vI','vS','vJ','vT','vU','vV','vW','vK','vL'];
+
+      let labelList = [];
+      let dataList =[];
+      for (const s of nms)
+        labelList.push(`${s}`);
+      let graphData = {
+        labels: labelList,
+        datasets: [{
+          data: [],
+          fill: false,
+          borderColor : "rgba(192, 192, 192, 1.0)",
+          backgroundColor : "rgba(192, 192, 192, 1.0)",
+          showLine: true
+        }]
+      };
+      let graphOptions = {
+        scales: {
+          xAxes: [{
+            type: 'linear',
+            position: 'bottom',
+            gridLines: {
+              color: "rgba(128, 128, 128, 0.5)"
+            },
+            ticks: {
+              stepSize: (nms[2] - nms[0])
+            }
+          }],
+          yAxes: [{
+            type: 'linear',
+            gridLines: {
+              color: "rgba(128, 128, 128, 0.5)"
+            }
+          }]
+        },
+        elements: {
+          line: {
+            tension: 0.5 // disables bezier curves
+          }
+        },
+        legend: {
+          display: false
+        },
+        title: {
+          display: true,
+          text: 'Preparing...'
+        }
+      };
+      Chart.defaults.global.defaultFontColor = "rgba(192, 192, 192, 1.0)";
+
+      let ctx = document.getElementById("myChart").getContext('2d');
+      let chart = new Chart(ctx, {
+        type: 'scatter',
+        data: graphData,
+        options: graphOptions
+      });
+
+      let ws = new WebSocket('ws://' + window.location.hostname + ':81/');
+      ws.onmessage = function(evt) {
+        var Time = new Date().toLocaleTimeString();
+        dataList = [];
+        for (let i = 0; i<vCH.length; i++)
+          dataList.push({x: nms[i], y: JSON.parse(evt.data)[vCH[i]]});
+        // console.log(dataList);
+        chart.options.title.text = Time;
+        chart.data.datasets[0].data = dataList;
+        chart.update();
+      };
+
+      ws.onclose = function(evt) {
+        console.log("ws: onclose");
+        ws.close();
+      }
+
+      ws.onerror = function(evt) {
+        console.log(evt);
+      }
+    </script>
+  </body>
+</html>
