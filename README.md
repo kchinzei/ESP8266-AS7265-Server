@@ -14,11 +14,11 @@ AS7265x has three optical sensors to obtain 18-band spectroscopic intensity betw
 
 ![AS7265x](https://cdn.sparkfun.com/r/500-500/assets/parts/1/3/3/9/3/15050-SparkFun_Triad_Spectroscopy_Sensor_-_AS7265x__Qwiic_-01.jpg "Overview of AS7265x")
 
-My personal interest is using AS7265x to measure the chromaticity of LEDs to use in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors.
+My personal interest is to use AS7265x to measure the chromaticity of LEDs to use in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. That's why the chart is in very dark mode.
 
 ## Requirements
 
-- ESP8266 2GB flash or more.
+- ESP8266 2MB flash or more.
 - [SparkFun Triad Spectroscopy Sensor - AS7265x](https://www.sparkfun.com/products/15050)
 - [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
 - [Arduino core for ESP8266 WiFi chip](https://github.com/esp8266/Arduino)
@@ -36,7 +36,7 @@ Very simplified flow is like this:
 1. Open ESP8266-AS7265-Server.ino
 1. You may want to change OTA password in this file. Find and modify `you_must_set_your_pw`, or simply delete this line.
 1. Download [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js) and put into 'data' folder.
-1. [Install Arduino core for ESP8266](https://github.com/esp8266/Arduino#installing-with-boards-manager)
+1. [Install Arduino core for ESP8266](https://github.com/esp8266/Arduino#installing-with-boards-manager) Select "ESP8266 Board" in Tools >> Board menu. I choose 2MB(FS:512KB OTA:~768KB) for "Flash size".
 1. Also install [WebSocket Server and Client for Arduino](https://github.com/Links2004/arduinoWebSockets) and [WifiManager](https://github.com/tzapu/WiFiManager).
 1. Upload contents of 'data' folder to ESP8266. You can use [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin).
 1. Compile and burn ESP8266.

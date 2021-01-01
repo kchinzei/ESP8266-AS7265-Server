@@ -1,6 +1,30 @@
 body {
     font-family: Helvetica, Arial, Sans-serif;
-    flot-size: 15px;
+    font-size: 15px;
     color: #f0f0f0;
     background-color: black;
+}
+
+/* https://saruwakakun.com/html-css/reference/buttons */
+
+.btn-flat-border {
+  display: inline-block;
+  padding: 0.3em 1em;
+  margin: 5% 5% 0%;
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 1.5rem;
+  color: #a0a0a0;
+  border: solid 2px #a0a0a0;
+  border-radius: 6px;
+  transition: .4s;
+}
+
+.btn-flat-border:hover {
+  background: #404040;
+}
+
+.btn-flat-border:active {
+  background: #c0c0c0;
+  color: #606060;
 }
