@@ -29,3 +29,13 @@ body {
 .button:hover {
   background: #606060;
 }
+
+.button-hidden {
+  opacity: 0;
+}
+
+.m-fadeIn {
+  visibility: visible;
+  opacity: 1;
+  transition: visibility 0s linear 0s, opacity 300ms;
+}

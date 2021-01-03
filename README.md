@@ -10,11 +10,11 @@ I use Arduino IDE, but it should run with other tools such as [PlatformIO](https
 
 ## About [AS7265x](https://www.sparkfun.com/products/15050)
 
-AS7265x has three optical sensors to obtain 18-band spectroscopic intensity between 410 and 940 nm, which means from UV to NIR. This is not a professional instrument which will cost x20 or more of thµis. But this is a [Maker](https://makezine.com)'s choice, isn't it?
+AS7265x has three optical sensors to obtain 18-band spectroscopic intensity between 410 and 940 nm, which means from UV to NIR. This is not a professional instrument which will cost x20 or more of this. But this is a [Maker](https://makezine.com)'s choice, isn't it?
 
 ![AS7265x](https://cdn.sparkfun.com/r/500-500/assets/parts/1/3/3/9/3/15050-SparkFun_Triad_Spectroscopy_Sensor_-_AS7265x__Qwiic_-01.jpg "Overview of AS7265x")
 
-My personal interest is to use AS7265x to measure the chromaticity of LEDs to use in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. That's why the chart is in very dark mode.
+My personal interest is to use it to measure the chromaticity of LEDs in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. I need to do it in a dark room, that's why the chart is in very dark mode.
 
 ## Requirements
 
@@ -31,11 +31,12 @@ My personal interest is to use AS7265x to measure the chromaticity of LEDs to us
 ## Installation
 
 Very simplified flow is like this:
-1. Wire AS7265x and ESP8266. Connect as I2C; SDA-IO4, SCL-IO5, and 3V3, GND.
+1. Wire AS7265x and ESP8266 as I2C; SDA/SCL of AS7265x to IO4/IO5 of ESP, and 3V3, GND.
 1. Clone or download this repository.
 1. Open ESP8266-AS7265-Server.ino
 1. You may want to change OTA password in this file. Find and modify `you_must_set_your_pw`, or simply delete this line.
-1. Download [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js) and put into 'data' folder.
+1. You may also want to change Timezone and NTP servers.
+1. Download [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js) and put into 'data' folder. Alternatively you can directly source it in index.html.
 1. [Install Arduino core for ESP8266](https://github.com/esp8266/Arduino#installing-with-boards-manager) Select "ESP8266 Board" in Tools >> Board menu. I choose 2MB(FS:512KB OTA:~768KB) for "Flash size".
 1. Also install [WebSocket Server and Client for Arduino](https://github.com/Links2004/arduinoWebSockets) and [WifiManager](https://github.com/tzapu/WiFiManager).
 1. Upload contents of 'data' folder to ESP8266. You can use [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin).
@@ -45,6 +46,7 @@ Very simplified flow is like this:
 
 ## To Dos
 
+- Buffered logging - current code writes line by line. In terms of flash memory wearing, it should be minimized.
 - Download CSV file button
 - AS7265x setting panel (gain, LED on/off)
 - [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)

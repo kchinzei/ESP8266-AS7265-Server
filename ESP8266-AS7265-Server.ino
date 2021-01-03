@@ -56,6 +56,7 @@
 AS7265X sensor;
 #include <Wire.h>
 #include <elapsedMillis.h>
+#include "bufferedFile.h"
 
 ESP8266WebServer webServer(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
@@ -75,8 +76,7 @@ const char *mdnsName = "esp8266";
  In idle mode, it samples slowly (with more integration), periodically update the chart.
  */
 int logging = 0;
-
-
+int loaded = 0; // Is whole page has loaded?
 
 // WebSocket staff
 // Mostly based on Pieter's Beginner's Guide, thank you!
@@ -111,29 +111,50 @@ void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
   switch (type) {
     case WStype_DISCONNECTED:             // if the websocket is disconnected
       Serial.printf("[%u] Disconnected!\n", num);
+      loaded = 0;
       break;
     case WStype_CONNECTED: {              // if a new websocket connection is established
         IPAddress ip = webSocket.remoteIP(num);
         Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
       }
       break;
-    case WStype_TEXT:                     // if new text data is received
-      Serial.printf("[%u] get Text: %s\n", num, payload);
-      if (strncmp((const char *)payload, "toggleLogBtn", length) == 0) {
-        if (logging == 0) {
-          start_Logging();
-        } else {
-          end_Logging();
+    case WStype_TEXT: {                    // if new text data is received
+        Serial.printf("[%u] get Text: %s\n", num, payload);
+        if (strncmp((const char *)payload, "ready", length) == 0) {
+          loaded = 1;
+        } else if (strncmp((const char *)payload, "onToggleLogBtn", length) == 0) {
+          if (logging == 0) {
+            start_Logging();
+          } else {
+            end_Logging();
+          }
+        }
+        else if (strncmp((const char *)payload, "onLogfileBtn", length) == 0) {
+          
         }
       }
       break;
   }
 }
 
+char * WebSocketMsg_LoggingStarted = "loggingStarted";
+char * WebSocketMsg_LoggingEnded   = "loggingEnded";
+char * WebSocketMsg_EnableDownloadLogFile  = "enableDownloadLogfile";
+char * WebSocketMsg_DisableDownloadLogFile = "disnableDownloadLogfile";
+
 void notifySocketStatus() {
-  char *payload = "loggingStarted";
-  if (logging == 0) payload = "loggingEnded";          
-  webSocket.broadcastTXT(payload, strlen(payload));
+  char *payload;
+  if (logging == 0) {
+    payload = WebSocketMsg_LoggingEnded;
+    webSocket.broadcastTXT(payload, strlen(payload));
+    payload = WebSocketMsg_DisableDownloadLogFile;
+    webSocket.broadcastTXT(payload, strlen(payload));
+  } else {
+    payload = WebSocketMsg_LoggingStarted;
+    webSocket.broadcastTXT(payload, strlen(payload));
+    payload = WebSocketMsg_EnableDownloadLogFile;
+    webSocket.broadcastTXT(payload, strlen(payload));
+  }
 }
 
 
@@ -149,7 +170,7 @@ const unsigned long maxLogtime = 10000; // msec
 
 // Maxlen is 32. cf: https://arduino-esp8266.readthedocs.io/en/latest/filesystem.html#spiffs-file-system-limitations
 String logFilename = "";
-File fpLogging;
+bufferedFile fpLogging;
 
 void start_Logging() {
   if (logging == 1) return;
@@ -159,10 +180,8 @@ void start_Logging() {
   logFilename = "/";
   logFilename += getCurrentTimeStr();
   logFilename += ".csv";
-  fpLogging = SPIFFS.open(logFilename, "w");
-  if (!fpLogging)
-    return;
-  
+  fpLogging.open(logFilename);
+
   sensor.setIntegrationCycles(9); // 10 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_CONTINUOUS); //All 6 channels on all devices
   
@@ -174,38 +193,40 @@ void start_Logging() {
 
 void end_Logging() {
   if (logging == 0) return;
-  if (fpLogging)
-    fpLogging.close();
+  fpLogging.close();
+  Serial.printf("Log %ld samples in file %s\n", logging, logFilename.c_str());
+  listDir();
   logging = 0;
+  sensor.setIntegrationCycles(49); // 50 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
-  sensor.setIntegrationCycles(49); // 50 integration (default)
-  notifySocketStatus();  
+  notifySocketStatus();
 }
 
 void sensor_loop() {
   if (logging) {
     if (sensor.dataAvailable()) {
         const char *s = sensor_sampling(SENSOR_CSV);
-        if (fpLogging)
-            fpLogging.write(s, strlen(s));
+        fpLogging.write((const uint8_t *)s, strlen(s));
+        logging++;
     }
     if (elapsedLogtime > maxLogtime) {
       end_Logging();
     }
   } else {
     // When doing log saving, it stops updating webSocket.
-    if (elapsedIdle > IntervalIdle) {
+    if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
       const char *s = sensor_sampling(SENSOR_JSON);
-      webSocket.broadcastTXT(s, strlen(s));
+      sensor.enableIndicator();
+      if (loaded) webSocket.broadcastTXT(s, strlen(s));
+      sensor.disableIndicator();
+      sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
     }
   }
 }
 
 const char *sensor_sampling(const char *formatstr) {
   static char _payload[360]; // Possible max is 4294967296.0 = 2^32, and format will safely fit.
-  sensor.disableIndicator();
-  sensor.takeMeasurements();
   snprintf_P(_payload, sizeof(_payload), formatstr,
              sensor.getCalibratedA(),
              sensor.getCalibratedB(),
@@ -225,7 +246,6 @@ const char *sensor_sampling(const char *formatstr) {
              sensor.getCalibratedU(),
              sensor.getCalibratedV(),
              sensor.getCalibratedW());
-  sensor.enableIndicator();
   return _payload;
 }
 
@@ -237,6 +257,7 @@ void start_Sensor() {
 
   // Once the sensor is started we can increase the I2C speed
   Wire.setClock(400000);
+  sensor.setIntegrationCycles(9); // 10 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
   // 
 
@@ -301,6 +322,15 @@ void startOTA() { // Start the OTA service
 void startSPIFFS() {
   SPIFFS.begin();
   Serial.println("SPIFFS started.");
+  {
+    Dir dir = SPIFFS.openDir("/");
+    while (dir.next()) {                      // List the file system contents
+      String fileName = dir.fileName();
+      size_t fileSize = dir.fileSize();
+      Serial.printf("\tFS File: %s, size: %s\r\n", fileName.c_str(), formatBytes(fileSize).c_str());
+    }
+    Serial.printf("\n");
+  }
 }
 
 void startWebSocket() {
@@ -350,6 +380,16 @@ void loop(void) {
   webServer.handleClient();
   ArduinoOTA.handle();
   sensor_loop();
+}
+
+void listDir() {
+  Dir dir = SPIFFS.openDir("/");
+  while (dir.next()) {                      // List the file system contents
+    String fileName = dir.fileName();
+    size_t fileSize = dir.fileSize();
+    Serial.printf("\tFS File: %s, size: %s\r\n", fileName.c_str(), formatBytes(fileSize).c_str());
+  }
+  Serial.println("");
 }
 
 String formatBytes(size_t bytes) { // convert sizes in bytes to KB and MB

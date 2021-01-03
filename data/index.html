@@ -14,11 +14,16 @@
       <canvas id="myChart" width="600" height="400"></canvas>
     </div>
     <div style="text-align:center;">
-      <p><button id="toggleLogBtn" class="button">Start Logging</button></p>
+      <p>
+        <button id="toggleLogBtn" class="button">Start Logging</button>
+        <button id="downloadLogfileBtn" class="button button-hidden">Download Logfile</button>
+      </p>
     </div>
 
-    <script src = "/Chart.min.js"></script>  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js" integrity="sha512-d9xgZrVZpmmQlfonhQUvTR7lMPtO7NkZMkA0ABN3PHCbKA5nqylQ/yWlFAyY6hYgdF1Qh6nYiuADWwKB4C2WSw==" crossorigin="anonymous"></script>
     <script>
+      let loaded = false;
+      let wsopen = false;
       const nms = [410,435,460,485,510,535,560,585,610,645,680,705,730,760,810,860,900,940];
       const vCH = ['vA','vB','vC','vD','vE','vF','vG','vH','vR','vI','vS','vJ','vT','vU','vV','vW','vK','vL'];
 
@@ -68,23 +73,30 @@
           text: 'Preparing...'
         }
       };
-      Chart.defaults.global.defaultFontColor = "rgba(192, 192, 192, 1.0)";
-
       let ctx = document.getElementById("myChart").getContext('2d');
       let chart = new Chart(ctx, {
         type: 'scatter',
         data: graphData,
         options: graphOptions
       });
+      // chart.defaults.global.defaultFontColor = "rgba(192, 192, 192, 1.0)";
 
+      let toggleLogButton = document.getElementById('toggleLogBtn');
+      let downloadLogfileBtn = document.getElementById('downloadLogfileBtn');
       let ws = new WebSocket(`ws://${window.location.hostname}:81/`);
       ws.onmessage = function(evt) {
         switch (evt.data) {
         case 'loggingStarted':
-          document.getElementById('toggleLogBtn').innerHTML = 'Stop Logging';
+          toggleLogBtn.innerHTML = 'Stop Logging';
           break;
         case 'loggingEnded':
-          document.getElementById('toggleLogBtn').innerHTML = 'Start Logging';
+          toggleLogBtn.innerHTML = 'Start Logging';
+          break;
+        case 'enableDownloadLogfile':
+          downloadLogfileBtn.classList.add("m-fadeIn");
+          break;
+        case 'disnableDownloadLogfile':
+          downloadLogfileBtn.classList.remove("m-fadeIn");
           break;
         default:
           var Time = new Date().toLocaleTimeString();
@@ -98,6 +110,12 @@
         }
       };
 
+      ws.onopen = function(evt) {
+        console.log("ws: onpen");
+        wsopen = true;
+        if (loaded) ws.send('ready');
+      }
+      
       ws.onclose = function(evt) {
         console.log("ws: onclose");
         ws.close();
@@ -108,23 +126,28 @@
       }
 
       function initWebSocket() {
-        // ws.onopen    = onOpen;
-        // ws.onclose   = onClose;
+
       }
 
       window.addEventListener('load', onLoad);
 
       function onLoad(event) {
+        loaded = true;
+        if (wsopen) ws.send('ready');
         initWebSocket();
         initButtons();
       }
 
       function initButtons() {
-        document.getElementById('toggleLogBtn').addEventListener('click', onToggleLogBtn);
+        toggleLogBtn.addEventListener('click', onToggleLogBtn);
+        downloadLogfileBtn.addEventListener('click', onDownloadLogfileBtn);
       }
 
       function onToggleLogBtn(){
-        ws.send('toggleLogBtn');
+        ws.send('onToggleLogBtn');
+      }
+      function onDownloadLogfileBtn() {
+        ws.send('onDownloadLogfileBtn');
       }
     </script>
   </body>
