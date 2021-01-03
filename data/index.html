@@ -14,7 +14,7 @@
       <canvas id="myChart" width="600" height="400"></canvas>
     </div>
     <div style="text-align:center;">
-      <a href="#" class="btn-flat-border">Stop measurement</a> <a href="#" class="btn-flat-border">Download CSV file</a>
+      <p><button id="toggleLogBtn" class="button">Start Logging</button></p>
     </div>
 
     <script src = "/Chart.min.js"></script>  
@@ -45,7 +45,7 @@
               color: "rgba(128, 128, 128, 0.5)"
             },
             ticks: {
-              stepSize: (nms[2] - nms[0])
+              stepSize: 50
             }
           }],
           yAxes: [{
@@ -77,16 +77,25 @@
         options: graphOptions
       });
 
-      let ws = new WebSocket('ws://' + window.location.hostname + ':81/');
+      let ws = new WebSocket(`ws://${window.location.hostname}:81/`);
       ws.onmessage = function(evt) {
-        var Time = new Date().toLocaleTimeString();
-        dataList = [];
-        for (let i = 0; i<vCH.length; i++)
-          dataList.push({x: nms[i], y: JSON.parse(evt.data)[vCH[i]]});
-        // console.log(dataList);
-        chart.options.title.text = Time;
-        chart.data.datasets[0].data = dataList;
-        chart.update();
+        switch (evt.data) {
+        case 'loggingStarted':
+          document.getElementById('toggleLogBtn').innerHTML = 'Stop Logging';
+          break;
+        case 'loggingEnded':
+          document.getElementById('toggleLogBtn').innerHTML = 'Start Logging';
+          break;
+        default:
+          var Time = new Date().toLocaleTimeString();
+          dataList = [];
+          for (let i = 0; i<vCH.length; i++)
+            dataList.push({x: nms[i], y: JSON.parse(evt.data)[vCH[i]]});
+          // console.log(dataList);
+          chart.options.title.text = Time;
+          chart.data.datasets[0].data = dataList;
+          chart.update();
+        }
       };
 
       ws.onclose = function(evt) {
@@ -96,6 +105,26 @@
 
       ws.onerror = function(evt) {
         console.log(evt);
+      }
+
+      function initWebSocket() {
+        // ws.onopen    = onOpen;
+        // ws.onclose   = onClose;
+      }
+
+      window.addEventListener('load', onLoad);
+
+      function onLoad(event) {
+        initWebSocket();
+        initButtons();
+      }
+
+      function initButtons() {
+        document.getElementById('toggleLogBtn').addEventListener('click', onToggleLogBtn);
+      }
+
+      function onToggleLogBtn(){
+        ws.send('toggleLogBtn');
       }
     </script>
   </body>

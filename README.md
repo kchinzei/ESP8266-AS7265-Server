@@ -10,7 +10,7 @@ I use Arduino IDE, but it should run with other tools such as [PlatformIO](https
 
 ## About [AS7265x](https://www.sparkfun.com/products/15050)
 
-AS7265x has three optical sensors to obtain 18-band spectroscopic intensity between 410 and 940 nm, which means from UV to NIR.
+AS7265x has three optical sensors to obtain 18-band spectroscopic intensity between 410 and 940 nm, which means from UV to NIR. This is not a professional instrument which will cost x20 or more of thµis. But this is a [Maker](https://makezine.com)'s choice, isn't it?
 
 ![AS7265x](https://cdn.sparkfun.com/r/500-500/assets/parts/1/3/3/9/3/15050-SparkFun_Triad_Spectroscopy_Sensor_-_AS7265x__Qwiic_-01.jpg "Overview of AS7265x")
 
@@ -43,10 +43,11 @@ Very simplified flow is like this:
 1. Connect your PC/smartphone to wifi SSID `esp8266XXXXX` with `XXXXX` an hardware identifier for your ESP8266. Connecting this will prompt you to enter your Wifi setting. You must do it within 180 seconds.
 1. Once it is done, you should observe a blue LED on AS7265 blinks. If not, something wrong. If OK, you should be able to connect to your ESP8266 by http://esp8266.local. And the spectroscopy is updated every 1 second. Enjoy!
 
-## To Do
+## To Dos
 
-- Start / Stop buttons
-- Download CVS file button
+- Download CSV file button
+- AS7265x setting panel (gain, LED on/off)
+- [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)
 
 ## References
 
