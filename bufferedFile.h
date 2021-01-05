@@ -88,17 +88,15 @@ public:
                 
                 if (length < size_extra) {
                     memcpy(this->_current, buf, length);
-                    Serial.printf("store %ld bytes; extra= %ld bytes\n", length, size_extra);
                     this->_current += length;
                     written += length;
                     length = 0;
                 } else {
                     // Need buffer flush.
                     memcpy(this->_current, buf, size_extra);
-                    Serial.printf("store %ld bytes; extra= %ld bytes; REACH MAX\n", length, size_extra);
                     this->_fp.write(this->_buf, this->_size);
-                    Serial.printf("write %ld bytes\n", this->_size);
                     this->_current = this->_buf;
+                    buf += size_extra;
                     length -= size_extra;
                     written += size_extra;
                 }
@@ -116,7 +114,6 @@ public:
         
         if (this->_buf) {
             size_t size_remain = this->_current - this->_buf;
-            Serial.printf("write %ld bytes remaining\n", size_remain);
             if (size_remain > 0) {
                 this->_fp.write(this->_buf, size_remain);
                 written += size_remain;

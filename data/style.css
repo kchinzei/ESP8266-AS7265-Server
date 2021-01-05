@@ -37,5 +37,5 @@ body {
 .m-fadeIn {
   visibility: visible;
   opacity: 1;
-  transition: visibility 0s linear 0s, opacity 300ms;
+  transition: visibility 0s linear 0s, opacity 500ms;
 }

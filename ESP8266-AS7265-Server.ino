@@ -110,16 +110,15 @@ void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
   // Handle received WebSOcket events
   switch (type) {
     case WStype_DISCONNECTED:             // if the websocket is disconnected
-      Serial.printf("[%u] Disconnected!\n", num);
+      Serial.printf("[%u] Disconnected!\r\n", num);
       loaded = 0;
       break;
     case WStype_CONNECTED: {              // if a new websocket connection is established
         IPAddress ip = webSocket.remoteIP(num);
-        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
       }
       break;
     case WStype_TEXT: {                    // if new text data is received
-        Serial.printf("[%u] get Text: %s\n", num, payload);
         if (strncmp((const char *)payload, "ready", length) == 0) {
           loaded = 1;
         } else if (strncmp((const char *)payload, "onToggleLogBtn", length) == 0) {
@@ -129,30 +128,34 @@ void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t 
             end_Logging();
           }
         }
-        else if (strncmp((const char *)payload, "onLogfileBtn", length) == 0) {
-          
-        }
       }
       break;
   }
 }
 
+// Maxlen is 32. cf: https://arduino-esp8266.readthedocs.io/en/latest/filesystem.html#spiffs-file-system-limitations
+String logFilename = "";
+
 char * WebSocketMsg_LoggingStarted = "loggingStarted";
 char * WebSocketMsg_LoggingEnded   = "loggingEnded";
 char * WebSocketMsg_EnableDownloadLogFile  = "enableDownloadLogfile";
-char * WebSocketMsg_DisableDownloadLogFile = "disnableDownloadLogfile";
+char * WebSocketMsg_DisableDownloadLogFile = "disableDownloadLogfile";
 
 void notifySocketStatus() {
   char *payload;
   if (logging == 0) {
     payload = WebSocketMsg_LoggingEnded;
     webSocket.broadcastTXT(payload, strlen(payload));
-    payload = WebSocketMsg_DisableDownloadLogFile;
-    webSocket.broadcastTXT(payload, strlen(payload));
+    if (logFilename != "") {
+      String s = WebSocketMsg_EnableDownloadLogFile;
+      s += " ";
+      s += logFilename;
+      webSocket.broadcastTXT(s.c_str(), s.length());
+    }
   } else {
     payload = WebSocketMsg_LoggingStarted;
     webSocket.broadcastTXT(payload, strlen(payload));
-    payload = WebSocketMsg_EnableDownloadLogFile;
+    payload = WebSocketMsg_DisableDownloadLogFile;
     webSocket.broadcastTXT(payload, strlen(payload));
   }
 }
@@ -160,16 +163,14 @@ void notifySocketStatus() {
 
 // Logging staff
 
-const char SENSOR_JSON[] PROGMEM = R"=====({"vA":%5.1f,"vB":%5.1f,"vC":%5.1f,"vD":%5.1f,"vE":%5.1f,"vF":%5.1f,"vG":%5.1f,"vH":%5.1f,"vI":%5.1f,"vJ":%5.1f,"vK":%5.1f,"vL":%5.1f,"vR":%5.1f,"vS":%5.1f,"vT":%5.1f,"vU":%5.1f,"vV":%5.1f,"vW":%5.1f})=====";
-const char SENSOR_CSV[] PROGMEM = R"=====({%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f,%5.1f\n)=====";
+const char SENSOR_JSON[] PROGMEM = R"=====({"vA":%5.1f,"vB":%5.1f,"vC":%5.1f,"vD":%5.1f,"vE":%5.1f,"vF":%5.1f,"vG":%5.1f,"vH":%5.1f,"vI":%5.1f,"vJ":%5.1f,"vK":%5.1f,"vL":%5.1f,"vR":%5.1f,"vS":%5.1f,"vT":%5.1f,"vU":%5.1f,"vV":%5.1f,"vW":%5.1f}%s)=====";
+const char SENSOR_CSV[] PROGMEM = R"=====(%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f%s)=====";
 
 elapsedMillis elapsedIdle;
 elapsedMillis elapsedLogtime;
 const unsigned long IntervalIdle = 1000; // msec
 const unsigned long maxLogtime = 10000; // msec
 
-// Maxlen is 32. cf: https://arduino-esp8266.readthedocs.io/en/latest/filesystem.html#spiffs-file-system-limitations
-String logFilename = "";
 bufferedFile fpLogging;
 
 void start_Logging() {
@@ -194,11 +195,11 @@ void start_Logging() {
 void end_Logging() {
   if (logging == 0) return;
   fpLogging.close();
-  Serial.printf("Log %ld samples in file %s\n", logging, logFilename.c_str());
-  listDir();
-  logging = 0;
+  // Serial.printf("Log %ld samples in file %s\r\n", logging, logFilename.c_str());
+  // listDir();
   sensor.setIntegrationCycles(49); // 50 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
+  logging = 0;
   notifySocketStatus();
 }
 
@@ -214,7 +215,8 @@ void sensor_loop() {
     }
   } else {
     // When doing log saving, it stops updating webSocket.
-    if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
+    // if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
+    if (sensor.dataAvailable()) {
       elapsedIdle = 0;
       const char *s = sensor_sampling(SENSOR_JSON);
       sensor.enableIndicator();
@@ -245,7 +247,8 @@ const char *sensor_sampling(const char *formatstr) {
              sensor.getCalibratedT(),
              sensor.getCalibratedU(),
              sensor.getCalibratedV(),
-             sensor.getCalibratedW());
+             sensor.getCalibratedW(),
+             "\r\n");
   return _payload;
 }
 
@@ -322,15 +325,7 @@ void startOTA() { // Start the OTA service
 void startSPIFFS() {
   SPIFFS.begin();
   Serial.println("SPIFFS started.");
-  {
-    Dir dir = SPIFFS.openDir("/");
-    while (dir.next()) {                      // List the file system contents
-      String fileName = dir.fileName();
-      size_t fileSize = dir.fileSize();
-      Serial.printf("\tFS File: %s, size: %s\r\n", fileName.c_str(), formatBytes(fileSize).c_str());
-    }
-    Serial.printf("\n");
-  }
+  // listDir();
 }
 
 void startWebSocket() {
@@ -409,6 +404,7 @@ String getContentType(String filename) {
   else if (filename.endsWith(".js")) return "application/javascript";
   else if (filename.endsWith(".ico")) return "image/x-icon";
   else if (filename.endsWith(".gz")) return "application/x-gzip";
+  else if (filename.endsWith(".csv")) return "text/csv";
   return "text/plain";
 }
 
@@ -417,8 +413,6 @@ void cleanupLogfiles() {
   while (dir.next()) {                      // List the file system contents
     String fileName = dir.fileName();
     if (fileName.endsWith(".csv")) {
-      size_t fileSize = dir.fileSize();
-      Serial.printf("\tRemove File: %s, size: %s\r\n", fileName.c_str(), formatBytes(fileSize).c_str());
       SPIFFS.remove(fileName);
     }
   }  

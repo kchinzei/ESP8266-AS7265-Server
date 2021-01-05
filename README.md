@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Hobby spectroscopy using [SparkFun AS7265](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
+Hobby spectroscopy using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
 
 ![ESP8266-AS7265-Server](./Artwortks/screenshot.png "Sample screen of ESP8266-AS7265-Server")
 
@@ -42,12 +42,10 @@ Very simplified flow is like this:
 1. Upload contents of 'data' folder to ESP8266. You can use [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin).
 1. Compile and burn ESP8266.
 1. Connect your PC/smartphone to wifi SSID `esp8266XXXXX` with `XXXXX` an hardware identifier for your ESP8266. Connecting this will prompt you to enter your Wifi setting. You must do it within 180 seconds.
-1. Once it is done, you should observe a blue LED on AS7265 blinks. If not, something wrong. If OK, you should be able to connect to your ESP8266 by http://esp8266.local. And the spectroscopy is updated every 1 second. Enjoy!
+1. Once it is done, you should observe a blue LED on AS7265x blinks. If not, something wrong. If OK, you should be able to connect to your ESP8266 by http://esp8266.local. And the spectroscopy is updated every 1 second. Enjoy!
 
 ## To Dos
 
-- Buffered logging - current code writes line by line. In terms of flash memory wearing, it should be minimized.
-- Download CSV file button
 - AS7265x setting panel (gain, LED on/off)
 - [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)
 

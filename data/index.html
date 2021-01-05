@@ -85,7 +85,9 @@
       let downloadLogfileBtn = document.getElementById('downloadLogfileBtn');
       let ws = new WebSocket(`ws://${window.location.hostname}:81/`);
       ws.onmessage = function(evt) {
-        switch (evt.data) {
+        let args = evt.data.split(' ');
+        let arg0 = args[0];
+        switch (arg0) {
         case 'loggingStarted':
           toggleLogBtn.innerHTML = 'Stop Logging';
           break;
@@ -93,9 +95,11 @@
           toggleLogBtn.innerHTML = 'Start Logging';
           break;
         case 'enableDownloadLogfile':
+          let fname = args[1];
+          downloadLogfileBtn.href = `${fname}`;
           downloadLogfileBtn.classList.add("m-fadeIn");
           break;
-        case 'disnableDownloadLogfile':
+        case 'disableDownloadLogfile':
           downloadLogfileBtn.classList.remove("m-fadeIn");
           break;
         default:
@@ -147,7 +151,8 @@
         ws.send('onToggleLogBtn');
       }
       function onDownloadLogfileBtn() {
-        ws.send('onDownloadLogfileBtn');
+        // document.location.assign(downloadLogfileBtn.href);
+        window.open(downloadLogfileBtn.href, '_blank');
       }
     </script>
   </body>
