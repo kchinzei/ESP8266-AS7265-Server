@@ -80,33 +80,11 @@ public:
     }
 
     size_t write(const uint8_t *buf, size_t length) {
-        size_t written = 0;
-        
-        if (this->_buf) {
-            while (length) {
-                size_t size_extra = this->_size - (this->_current - this->_buf);
-                
-                if (length < size_extra) {
-                    memcpy(this->_current, buf, length);
-                    this->_current += length;
-                    written += length;
-                    length = 0;
-                } else {
-                    // Need buffer flush.
-                    memcpy(this->_current, buf, size_extra);
-                    this->_fp.write(this->_buf, this->_size);
-                    this->_current = this->_buf;
-                    buf += size_extra;
-                    length -= size_extra;
-                    written += size_extra;
-                }
-            }
-        } else {
-            // When it fails to malloc, it does not use buffer.
-            this->_fp.write(buf, length);
-            written = length;
-        }
-        return written;
+        return _write(buf, length, memcpy);
+    }
+
+    size_t write_P(const uint8_t *buf, size_t length) {
+        return _write(buf, length, memcpy_P);
     }
 
     size_t close() {
@@ -136,6 +114,36 @@ private:
     size_t _size;
     uint8_t * _buf;
     uint8_t * _current;
+
+    size_t _write(const uint8_t *buf, size_t length, void *(*memcpy_p)(void *dest, const void *src, size_t n)) {
+        size_t written = 0;
+        
+        if (this->_buf) {
+            while (length) {
+                size_t size_extra = this->_size - (this->_current - this->_buf);
+                
+                if (length < size_extra) {
+                    (*memcpy_p)(this->_current, buf, length);
+                    this->_current += length;
+                    written += length;
+                    length = 0;
+                } else {
+                    // Need buffer flush.
+                    (*memcpy_p)(this->_current, buf, size_extra);
+                    this->_fp.write(this->_buf, this->_size);
+                    this->_current = this->_buf;
+                    buf += size_extra;
+                    length -= size_extra;
+                    written += size_extra;
+                }
+            }
+        } else {
+            // When it fails to malloc, it does not use buffer.
+            this->_fp.write(buf, length);
+            written = length;
+        }
+        return written;
+    }
 };
 
 #endif // _bufferedfile_h_

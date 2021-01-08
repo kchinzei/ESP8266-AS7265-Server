@@ -65,6 +65,7 @@ const char* TimeZoneStr = "JST-9";
 const char* NTPServerName1 = "ntp.nict.jp";
 const char* NTPServerName2 = "ntp.jst.mfeed.ad.jp";
 
+const unsigned long WifiManager_ConnectTimeOutSec = 30;
 const unsigned long WifiManager_TimeOutSec = 180;
 const char *OTAName = "ESP8266";
 const char *OTAPassword = "you_must_set_your_pw";
@@ -76,7 +77,6 @@ const char *mdnsName = "esp8266";
  In idle mode, it samples slowly (with more integration), periodically update the chart.
  */
 int logging = 0;
-int loaded = 0; // Is whole page has loaded?
 
 // WebSocket staff
 // Mostly based on Pieter's Beginner's Guide, thank you!
@@ -109,19 +109,19 @@ bool handleFileRead(String path) {
 void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
   // Handle received WebSOcket events
   switch (type) {
-    case WStype_DISCONNECTED:             // if the websocket is disconnected
-      Serial.printf("[%u] Disconnected!\r\n", num);
-      loaded = 0;
+    case WStype_DISCONNECTED: {           // if the websocket is disconnected
+        end_Logging();
+        Serial.printf("[%u] Disconnected!\r\n", num);
+      }
       break;
     case WStype_CONNECTED: {              // if a new websocket connection is established
+        end_Logging();
         IPAddress ip = webSocket.remoteIP(num);
         Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
       }
       break;
     case WStype_TEXT: {                    // if new text data is received
-        if (strncmp((const char *)payload, "ready", length) == 0) {
-          loaded = 1;
-        } else if (strncmp((const char *)payload, "onToggleLogBtn", length) == 0) {
+        if (strncmp((const char *)payload, "onToggleLogBtn", length) == 0) {
           if (logging == 0) {
             start_Logging();
           } else {
@@ -162,9 +162,9 @@ void notifySocketStatus() {
 
 
 // Logging staff
-
-const char SENSOR_JSON[] PROGMEM = R"=====({"vA":%5.1f,"vB":%5.1f,"vC":%5.1f,"vD":%5.1f,"vE":%5.1f,"vF":%5.1f,"vG":%5.1f,"vH":%5.1f,"vI":%5.1f,"vJ":%5.1f,"vK":%5.1f,"vL":%5.1f,"vR":%5.1f,"vS":%5.1f,"vT":%5.1f,"vU":%5.1f,"vV":%5.1f,"vW":%5.1f}%s)=====";
-const char SENSOR_CSV[] PROGMEM = R"=====(%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f%s)=====";
+const char SENSOR_JSON[] PROGMEM = R"=====({"vA":%5.1f,"vB":%5.1f,"vC":%5.1f,"vD":%5.1f,"vE":%5.1f,"vF":%5.1f,"vG":%5.1f,"vH":%5.1f,"vR":%5.1f,"vI":%5.1f,"vS":%5.1f,"vJ":%5.1f,"vT":%5.1f,"vU":%5.1f,"vV":%5.1f,"vW":%5.1f,"vK":%5.1f,"vL":%5.1f})=====";
+const char SENSOR_CSV[] PROGMEM = "%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f\r\n";
+const char SENSOR_CSV_HEADER[] PROGMEM = "410,435,460,485,510,535,560,585,610,645,680,705,730,760,810,860,900,940\r\n";
 
 elapsedMillis elapsedIdle;
 elapsedMillis elapsedLogtime;
@@ -182,14 +182,18 @@ void start_Logging() {
   logFilename += getCurrentTimeStr();
   logFilename += ".csv";
   fpLogging.open(logFilename);
+  fpLogging.write_P((const uint8_t *)SENSOR_CSV_HEADER, strlen_P(SENSOR_CSV_HEADER));
 
-  sensor.setIntegrationCycles(9); // 10 integration; 56 msec per cycle
+  // After some experiments it seems that sampling speed isn't fast as expected
+  // by setting it to 1, 9. Reason unclear - because of many tasks in loop()?
+  // sensor.setIntegrationCycles(1);  // 2 integration; 5.6 msec per cycle
+  // sensor.setIntegrationCycles(9);  // 10 integration; 28 msec per cycle
+  sensor.setIntegrationCycles(49); // 50 integration; 140 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_CONTINUOUS); //All 6 channels on all devices
-  
-  elapsedLogtime = 0;
 
+  elapsedLogtime = 0;
   logging = 1;
-  notifySocketStatus();  
+  notifySocketStatus();
 }
 
 void end_Logging() {
@@ -206,6 +210,7 @@ void end_Logging() {
 void sensor_loop() {
   if (logging) {
     if (sensor.dataAvailable()) {
+        elapsedIdle = 0;
         const char *s = sensor_sampling(SENSOR_CSV);
         fpLogging.write((const uint8_t *)s, strlen(s));
         logging++;
@@ -215,12 +220,11 @@ void sensor_loop() {
     }
   } else {
     // When doing log saving, it stops updating webSocket.
-    // if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
-    if (sensor.dataAvailable()) {
+    if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
       const char *s = sensor_sampling(SENSOR_JSON);
       sensor.enableIndicator();
-      if (loaded) webSocket.broadcastTXT(s, strlen(s));
+      webSocket.broadcastTXT(s, strlen(s));
       sensor.disableIndicator();
       sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
     }
@@ -238,17 +242,16 @@ const char *sensor_sampling(const char *formatstr) {
              sensor.getCalibratedF(),
              sensor.getCalibratedG(),
              sensor.getCalibratedH(),
-             sensor.getCalibratedI(),
-             sensor.getCalibratedJ(),
-             sensor.getCalibratedK(),
-             sensor.getCalibratedL(),
              sensor.getCalibratedR(),
+             sensor.getCalibratedI(),
              sensor.getCalibratedS(),
+             sensor.getCalibratedJ(),
              sensor.getCalibratedT(),
              sensor.getCalibratedU(),
              sensor.getCalibratedV(),
              sensor.getCalibratedW(),
-             "\r\n");
+             sensor.getCalibratedK(),
+             sensor.getCalibratedL());
   return _payload;
 }
 
@@ -260,14 +263,9 @@ void start_Sensor() {
 
   // Once the sensor is started we can increase the I2C speed
   Wire.setClock(400000);
-  sensor.setIntegrationCycles(9); // 10 integration; 56 msec per cycle
+  sensor.setIntegrationCycles(49); // 50 integration; 140 msec per cycle, default
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
-  // 
-
-  // sensor.setIntegrationCycles(1);
-  // 0 seems to cause the sensors to read very slowly
-  // 1*2.8ms = 5.6ms per reading
-  // But we need two integration cycles so 89Hz is aproximately the fastest read rate
+  sensor.setGain(AS7265X_GAIN_64X); // default
 
   sensor.enableIndicator();
   sensor.disableBulb(AS7265x_LED_WHITE);
@@ -281,9 +279,12 @@ void start_Sensor() {
 
 
 void startWiFi() {
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   WiFiManager wifiManager;
 
-  wifiManager.setTimeout(WifiManager_TimeOutSec);
+  wifiManager.setConnectTimeout(WifiManager_ConnectTimeOutSec); // how long to try to connect for before continuing
+  wifiManager.setConfigPortalTimeout(WifiManager_ConnectTimeOutSec); // auto close configportal after n seconds
+  wifiManager.setTimeout(WifiManager_TimeOutSec); // abondon no matter how it goes (even you're not finished setting it)
   if ( !wifiManager.autoConnect()) {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
@@ -347,6 +348,8 @@ void startNTP() {
 
 void startServer() {
   // We don't use .serveStatic() and .on(). Instead every access is done by onNotFound().
+  // webServer.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico");
+  // webServer.serveStatic("/index.html", SPIFFS, "/favicon.ico");
   webServer.onNotFound(handleNotFound);
   webServer.begin();
   Serial.println("HTTP server started.");
