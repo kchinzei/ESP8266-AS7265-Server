@@ -48,7 +48,21 @@
 #include <ESP8266mDNS.h>
 #include <FS.h>
 #include <WebSocketsServer.h>
+
+#define USE_WIFIMANAGER
+#ifdef USE_WIFIMANAGER
 #include <WiFiManager.h>
+const unsigned long WifiManager_ConnectTimeOutSec = 30;
+const unsigned long WifiManager_TimeOutSec = 180;
+#else
+#include <ESP8266WiFiMulti.h>
+ESP8266WiFiMulti wifiMulti;
+const uint32_t connectTimeoutMs = 5000;
+const char* ssid_1     = "ssid";         // The SSID (name) of the Wi-Fi network you want to connect to
+const char* password_1 = "password";     // The password of the Wi-Fi network
+const char* ssid_2     = "ssid2";
+const char* password_2 = "pssword2";
+#endif
 
 #include <time.h>
 
@@ -65,8 +79,6 @@ const char* TimeZoneStr = "JST-9";
 const char* NTPServerName1 = "ntp.nict.jp";
 const char* NTPServerName2 = "ntp.jst.mfeed.ad.jp";
 
-const unsigned long WifiManager_ConnectTimeOutSec = 30;
-const unsigned long WifiManager_TimeOutSec = 180;
 const char *OTAName = "ESP8266";
 const char *OTAPassword = "you_must_set_your_pw";
 const char *mdnsName = "esp8266";
@@ -277,7 +289,7 @@ void start_Sensor() {
 // Other startup routines.
 // Mostly based on Pieter's Beginner's Guide, thank you!
 
-
+#ifdef USE_WIFIMANAGER
 void startWiFi() {
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   WiFiManager wifiManager;
@@ -297,6 +309,26 @@ void startWiFi() {
   Serial.println("\" connected\r\n");
   Serial.println("\r\n");
 }
+
+#else
+void startWiFi() {
+  WiFi.mode(WIFI_STA);
+  
+  wifiMulti.addAP(ssid_1, password_1);   // add Wi-Fi networks you want to connect to
+  wifiMulti.addAP(ssid_2, password_2);
+
+  Serial.println("WifiMulti Connecting");
+  while (wifiMulti.run(connectTimeoutMs) != WL_CONNECTED) {  // Wait for the Wi-Fi to connect
+    delay(250);
+    Serial.print('.');
+  }
+  Serial.println("\r\n");
+  Serial.print("WiFi connected: ");
+  Serial.print(WiFi.SSID());
+  Serial.print(" ");
+  Serial.println(WiFi.localIP());
+}
+#endif
 
 void startOTA() { // Start the OTA service
   ArduinoOTA.setHostname(OTAName);
