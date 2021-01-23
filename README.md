@@ -1,10 +1,10 @@
-# ESP8266-AS7265-Server
+# ESP8266-AS7265x-Server
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Hobby spectroscopy using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
 
-![ESP8266-AS7265-Server](./Artwortks/screenshot.png "Sample screen of ESP8266-AS7265-Server")
+![ESP8266-AS7265x-Server](./Artwortks/screenshot.png "Sample screen of ESP8266-AS7265x-Server")
 
 I use Arduino IDE, but it should run with other tools such as [PlatformIO](https://platformio.org).
 
@@ -33,7 +33,7 @@ My personal interest is to use it to measure the chromaticity of LEDs in my [kch
 Very simplified flow is like this:
 1. Wire AS7265x and ESP8266 as I2C; SDA/SCL of AS7265x to IO4/IO5 of ESP, and 3V3, GND.
 1. Clone or download this repository.
-1. Open ESP8266-AS7265-Server.ino
+1. Open ESP8266-AS7265x-Server.ino
 1. You may want to change OTA password in this file. Find and modify `you_must_set_your_pw`, or simply delete this line.
 1. You may also want to change Timezone and NTP servers.
 1. Download [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js) and put into 'data' folder. Alternatively you can directly source it in index.html.
