@@ -16,14 +16,19 @@ AS7265x has three optical sensors to obtain 18-band spectroscopic intensity betw
 
 My personal interest is to use it to measure the chromaticity of LEDs in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. I need to do it in a dark room, that's why the chart is in very dark mode.
 
+### On accuracy of AS7265x
+
+Please note that every AS7265x is calibrated by using typical LEDs illuminating a 'white' object. As LED is far from the uniform flat spectrum, for the above purpose, you will need to re-calibrate each band to flatten the relative intensity of these bands.
+
 ## Requirements
 
 - ESP8266 2MB flash or more.
 - [SparkFun Triad Spectroscopy Sensor - AS7265x](https://www.sparkfun.com/products/15050)
 - [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
 - [Arduino core for ESP8266 WiFi chip](https://github.com/esp8266/Arduino)
-- [WebSocket Server and Client for Arduino](https://github.com/Links2004/arduinoWebSockets)
-- [WifiManager](https://github.com/tzapu/WiFiManager)
+- [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
+- [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
+- [AsyncWiFiManager](https://github.com/alanswx/ESPAsyncWiFiManager)
 - [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin) or equivalent
 - [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
 
@@ -38,10 +43,10 @@ Very simplified flow is like this:
 1. You may also want to change Timezone and NTP servers.
 1. Download [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js) and put into 'data' folder. Alternatively you can directly source it in index.html.
 1. [Install Arduino core for ESP8266](https://github.com/esp8266/Arduino#installing-with-boards-manager) Select "ESP8266 Board" in Tools >> Board menu. I choose 2MB(FS:512KB OTA:~768KB) for "Flash size".
-1. Also install [WebSocket Server and Client for Arduino](https://github.com/Links2004/arduinoWebSockets) and [WifiManager](https://github.com/tzapu/WiFiManager).
+1. Also install [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer), [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP) and [AsyncWiFiManager](https://github.com/alanswx/ESPAsyncWiFiManager).
 1. Upload contents of 'data' folder to ESP8266. You can use [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin).
 1. Compile and burn ESP8266.
-1. Connect your PC/smartphone to wifi SSID `esp8266XXXXX` with `XXXXX` an hardware identifier for your ESP8266. Connecting this will prompt you to enter your Wifi setting. You must do it within 180 seconds.
+1. Connect your PC/smartphone to wifi SSID `ESP_XXXXXXX` with `XXXXXXX` an hardware identifier for your ESP8266. Connecting this will prompt you to enter your Wifi setting. You must do it within 180 seconds.
 1. Once it is done, you should observe a blue LED on AS7265x blinks. If not, something wrong. If OK, you should be able to connect to your ESP8266 by http://esp8266.local. And the spectroscopy is updated every 1 second. Enjoy!
 
 ## To Dos
@@ -53,8 +58,9 @@ Very simplified flow is like this:
 
 Some part of code is written by learning from
 
-- [A Beginner's Guide to the ESP8266](https://tttapa.github.io/ESP8266/Chap01%20-%20ESP8266.html)
-- [ESP32: Webサーバ上でリアルタイムグラフ表示(Chart.js)](https://web.is.tokushima-u.ac.jp/wp/blog/2019/07/12/esp32-webサーバ上でグラフ表示chart-js/)
+- [A Beginner's Guide to the ESP8266](https://tttapa.github.io/ESP8266/Chap01%20-%20ESP8266.html) by [Pieter](https://tttapa.github.io)
+- [ESP32 Remote Control with WebSocket](https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/) by [m1cr0lab](https://github.com/m1cr0lab)
+- [ESP32: Webサーバ上でリアルタイムグラフ表示(Chart.js)](https://web.is.tokushima-u.ac.jp/wp/blog/2019/07/12/esp32-webサーバ上でグラフ表示chart-js/) [徳島大学技術支援部  辻 明典さま]
 
 # License
 

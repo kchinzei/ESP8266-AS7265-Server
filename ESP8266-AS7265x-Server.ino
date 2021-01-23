@@ -18,14 +18,15 @@
   THE SOFTWARE.
 */
 /*
-  ESP8266-AS7265-Server
+  ESP8266-AS7265x-Server
   Make Asayake to Wake Project.
   Kiyo Chinzei
-  https://github.com/kchinzei/ESP8266-AS7265-Server
+  https://github.com/kchinzei/ESP8266-AS7265x-Server
 */
 /*
   This program was modified from
   https://tttapa.github.io/ESP8266/Chap01%20-%20ESP8266.html / GNU GPL 3
+  https://m1cr0lab-esp32.github.io/remote-control-with-websocket/websocket-setup/
   https://web.is.tokushima-u.ac.jp/wp/blog/2019/07/12/esp32-webサーバ上でグラフ表示chart-js/
 
   About AS7265, see
@@ -33,27 +34,27 @@
   https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library / CC Share-alike 4.0
 
   You may also need;
-  WebSocket (one from Arduino's library manager is too old)
-  https://github.com/Links2004/arduinoWebSockets / GNU LESSER 2.1
-  WifiManager for Captive Portal / MIT
-  https://github.com/tzapu/WiFiManager
+  ESPAsyncWebServer
+  https://github.com/me-no-dev/ESPAsyncWebServer
+  ESPAsyncTCP
+  https://github.com/me-no-dev/ESPAsyncTCP
+  AsyncWiFiManager
+  https://github.com/alanswx/ESPAsyncWiFiManager
+  
   Arduino ESP8266 filesystem uploader to upload files to SPIFFS
   https://github.com/esp8266/arduino-esp8266fs-plugin / GNU GPL 2.0
 */
 #include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
+#include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <ArduinoOTA.h>
-#include <ESP8266WebServer.h>
 #include <DNSServer.h>
 #include <ESP8266mDNS.h>
 #include <FS.h>
-#include <WebSocketsServer.h>
 
 #define USE_WIFIMANAGER
 #ifdef USE_WIFIMANAGER
-#include <WiFiManager.h>
-const unsigned long WifiManager_ConnectTimeOutSec = 30;
-const unsigned long WifiManager_TimeOutSec = 180;
+#include <ESPAsync_WiFiManager.h>
 #else
 #include <ESP8266WiFiMulti.h>
 ESP8266WiFiMulti wifiMulti;
@@ -72,8 +73,9 @@ AS7265X sensor;
 #include <elapsedMillis.h>
 #include "bufferedFile.h"
 
-ESP8266WebServer webServer(80);
-WebSocketsServer webSocket = WebSocketsServer(81);
+AsyncWebServer webServer(80);
+AsyncWebSocket webSocket("/ws");
+DNSServer dnsServer;
 
 const char* TimeZoneStr = "JST-9";
 const char* NTPServerName1 = "ntp.nict.jp";
@@ -89,59 +91,52 @@ const char *mdnsName = "esp8266";
  In idle mode, it samples slowly (with more integration), periodically update the chart.
  */
 int logging = 0;
+void start_Logging();
+void end_Logging();
 
 // WebSocket staff
 // Mostly based on Pieter's Beginner's Guide, thank you!
 
-
-void handleNotFound() {
-  // if the requested file or page doesn't exist, return a 404 not found error
-  if (!handleFileRead(webServer.uri())) {
-    webServer.send(404, "text/plain", "404: File Not Found");
-  }
-}
-
-bool handleFileRead(String path) {
-  // send the right file to the client (if it exists)
-  if (path.endsWith("/")) path += "index.html";
-  String contentType = getContentType(path);
-  String pathWithGz = path + ".gz";
-  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {
-    if (SPIFFS.exists(pathWithGz))
-      path += ".gz";
-    File file = SPIFFS.open(path, "r");
-    size_t sent = webServer.streamFile(file, contentType);
-    file.close();
-    return true;
-  }
-  Serial.println(String("\tFile Not Found: ") + path);   // If the file doesn't exist, return false
-  return false;
-}
-
-void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-  // Handle received WebSOcket events
+void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
   switch (type) {
-    case WStype_DISCONNECTED: {           // if the websocket is disconnected
+    case WS_EVT_CONNECT: {
         end_Logging();
-        Serial.printf("[%u] Disconnected!\r\n", num);
+        os_printf("ws[%s][%u] connect\n", server->url(), client->id());
+        client->ping();
       }
       break;
-    case WStype_CONNECTED: {              // if a new websocket connection is established
+    case WS_EVT_DISCONNECT: {
         end_Logging();
-        IPAddress ip = webSocket.remoteIP(num);
-        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+        os_printf("ws[%s][%u] disconnect: %u\n", server->url(), client->id());
       }
       break;
-    case WStype_TEXT: {                    // if new text data is received
-        if (strncmp((const char *)payload, "onToggleLogBtn", length) == 0) {
-          if (logging == 0) {
-            start_Logging();
-          } else {
-            end_Logging();
+    case WS_EVT_ERROR:
+      os_printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
+      break;
+    case WS_EVT_PONG:
+      os_printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");
+      break;
+    case WS_EVT_DATA: {
+      //data packet
+      AwsFrameInfo * info = (AwsFrameInfo*)arg;
+      if(info->final && info->index == 0 && info->len == len) {
+        //the whole message is in a single frame and we got all of it's data
+        os_printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
+        if(info->opcode == WS_TEXT) {
+          if (strncmp((const char *)data, "onToggleLogBtn", len) == 0) {
+            if (logging == 0) {
+              start_Logging();
+            } else {
+              end_Logging();
+            }
           }
         }
+      } else {
+        // Todo:
+        // message is comprised of multiple frames or the frame is split into multiple packets
       }
-      break;
+    }
+    break;
   }
 }
 
@@ -157,18 +152,18 @@ void notifySocketStatus() {
   char *payload;
   if (logging == 0) {
     payload = WebSocketMsg_LoggingEnded;
-    webSocket.broadcastTXT(payload, strlen(payload));
+    webSocket.textAll(payload, strlen(payload));
     if (logFilename != "") {
       String s = WebSocketMsg_EnableDownloadLogFile;
       s += " ";
       s += logFilename;
-      webSocket.broadcastTXT(s.c_str(), s.length());
+      webSocket.textAll(s.c_str(), s.length());
     }
   } else {
     payload = WebSocketMsg_LoggingStarted;
-    webSocket.broadcastTXT(payload, strlen(payload));
+    webSocket.textAll(payload, strlen(payload));
     payload = WebSocketMsg_DisableDownloadLogFile;
-    webSocket.broadcastTXT(payload, strlen(payload));
+    webSocket.textAll(payload, strlen(payload));
   }
 }
 
@@ -236,7 +231,7 @@ void sensor_loop() {
       elapsedIdle = 0;
       const char *s = sensor_sampling(SENSOR_JSON);
       sensor.enableIndicator();
-      webSocket.broadcastTXT(s, strlen(s));
+      webSocket.textAll(s, strlen(s));
       sensor.disableIndicator();
       sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
     }
@@ -291,13 +286,12 @@ void start_Sensor() {
 
 #ifdef USE_WIFIMANAGER
 void startWiFi() {
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  WiFiManager wifiManager;
+  ESPAsync_WiFiManager ESPAsync_wifiManager(&webServer, &dnsServer);
+  // ESPAsync_wifiManager.resetSettings();   //reset saved settings
+  ESPAsync_wifiManager.autoConnect();
+  delay(5000);
 
-  wifiManager.setConnectTimeout(WifiManager_ConnectTimeOutSec); // how long to try to connect for before continuing
-  wifiManager.setConfigPortalTimeout(WifiManager_ConnectTimeOutSec); // auto close configportal after n seconds
-  wifiManager.setTimeout(WifiManager_TimeOutSec); // abondon no matter how it goes (even you're not finished setting it)
-  if ( !wifiManager.autoConnect()) {
+  if (WiFi.status() != WL_CONNECTED) {
     Serial.println("failed to connect and hit timeout");
     delay(3000);
     //reset and try again, or maybe put it to deep sleep
@@ -358,12 +352,12 @@ void startOTA() { // Start the OTA service
 void startSPIFFS() {
   SPIFFS.begin();
   Serial.println("SPIFFS started.");
-  // listDir();
+  listDir();
 }
 
 void startWebSocket() {
-  webSocket.begin();
-  webSocket.onEvent(handleWebSocketEvent);
+  webSocket.onEvent(onEvent);
+  webServer.addHandler(&webSocket);
   Serial.println("WebSocket server started.");
 }
 
@@ -379,17 +373,14 @@ void startNTP() {
 }
 
 void startServer() {
-  // We don't use .serveStatic() and .on(). Instead every access is done by onNotFound().
-  // webServer.serveStatic("/favicon.ico", SPIFFS, "/favicon.ico");
-  // webServer.serveStatic("/index.html", SPIFFS, "/favicon.ico");
-  webServer.onNotFound(handleNotFound);
+  webServer.serveStatic("/", SPIFFS, "/").setDefaultFile("index.html");
   webServer.begin();
   Serial.println("HTTP server started.");
 }
 
 void setup() {
   Serial.begin(115200);
-  delay(100);
+  delay(300);
   Serial.println("");
 
   startSPIFFS();
@@ -397,18 +388,18 @@ void setup() {
 
   startWiFi();
   startOTA();
-  startWebSocket();
   startMDNS();
   startNTP();
 
+  startWebSocket();
   startServer();
   start_Sensor();
 }
 
 void loop(void) {
-  webSocket.loop();
-  webServer.handleClient();
   ArduinoOTA.handle();
+  if (elapsedIdle > IntervalIdle)
+    webSocket.cleanupClients();
   sensor_loop();
 }
 

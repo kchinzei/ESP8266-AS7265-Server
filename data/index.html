@@ -8,7 +8,7 @@
   </head>
   <body>
     <div style="text-align:center;">
-      <b>AS7265 Spectroscopy</b>
+      <b>AS7265x Spectroscopy</b>
     </div>
     <div class="chart-container" position: relative; height:350px; width:100%>
       <canvas id="myChart" width="600" height="400"></canvas>
@@ -82,27 +82,30 @@
 
       let toggleLogButton = document.getElementById('toggleLogBtn');
       let downloadLogfileBtn = document.getElementById('downloadLogfileBtn');
-      let ws = new WebSocket(`ws://${window.location.hostname}:81/`);
-      ws.onmessage = function(evt) {
-        let args = evt.data.split(' ');
-        let arg0 = args[0];
-        switch (arg0) {
-        case 'loggingStarted':
-          toggleLogBtn.innerHTML = 'Stop Logging';
-          break;
-        case 'loggingEnded':
-          toggleLogBtn.innerHTML = 'Start Logging';
-          break;
-        case 'enableDownloadLogfile':
-          let fname = args[1];
-          downloadLogfileBtn.href = `${fname}`;
-          downloadLogfileBtn.classList.add("m-fadeIn");
-          break;
-        case 'disableDownloadLogfile':
-          downloadLogfileBtn.classList.remove("m-fadeIn");
-          break;
-        default:
-          if (loaded) {
+      let ws;
+
+      function initWebSocket() {
+        ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+
+        ws.onmessage = function(evt) {
+          let args = evt.data.split(' ');
+          let arg0 = args[0];
+          switch (arg0) {
+          case 'loggingStarted':
+            toggleLogBtn.innerHTML = 'Stop Logging';
+            break;
+          case 'loggingEnded':
+            toggleLogBtn.innerHTML = 'Start Logging';
+            break;
+          case 'enableDownloadLogfile':
+            let fname = args[1];
+            downloadLogfileBtn.href = `${fname}`;
+            downloadLogfileBtn.classList.add("m-fadeIn");
+            break;
+          case 'disableDownloadLogfile':
+            downloadLogfileBtn.classList.remove("m-fadeIn");
+            break;
+          default:
             let Time = new Date().toLocaleTimeString();
             dataList = [];
             for (let i = 0; i<vCH.length; i++)
@@ -113,23 +116,23 @@
             chart.update();
           }
         }
-      };
 
-      ws.onopen = function(evt) {
-        console.log("ws: onpen");
-      }
+        ws.onopen = function(evt) {
+          console.log("ws: onpen");
+        }
       
-      ws.onclose = function(evt) {
-        console.log("ws: onclose");
-        ws.close();
-      }
+        ws.onclose = function(evt) {
+          console.log("ws: onclose");
+          ws.close();
+          chart.options.title.text = "Connection Closed";
+        }
 
-      ws.onerror = function(evt) {
-        console.log(evt);
-      }
-
-      function initWebSocket() {
-
+        ws.onerror = function(evt) {
+          console.log("ws: onerror");
+          console.log(evt);
+          chart.options.title.text = "ERROR in connection";
+          // window.location.reload();
+        }
       }
 
       window.addEventListener('load', onLoad);
