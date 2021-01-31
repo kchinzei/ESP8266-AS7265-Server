@@ -72,6 +72,10 @@ AS7265X sensor;
 #include <Wire.h>
 #include <elapsedMillis.h>
 #include "bufferedFile.h"
+#include "AS7265x_Bulb.h"
+AS7265xBulb ledWhite;
+AS7265xBulb ledUV;
+AS7265xBulb ledIR;
 
 AsyncWebServer webServer(80);
 AsyncWebSocket webSocket("/ws");
@@ -91,6 +95,10 @@ const char *mdnsName = "esp8266";
  In idle mode, it samples slowly (with more integration), periodically update the chart.
  */
 int logging = 0;
+int logging_toggled = 0;
+int ledUV_toggled = 0;
+int ledWhite_toggled = 0;
+int ledIR_toggled = 0;
 void start_Logging();
 void end_Logging();
 
@@ -101,34 +109,36 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
   switch (type) {
     case WS_EVT_CONNECT: {
         end_Logging();
-        os_printf("ws[%s][%u] connect\n", server->url(), client->id());
+        Serial.printf("ws[%s][%u] connect\n", server->url(), client->id());
         client->ping();
       }
       break;
     case WS_EVT_DISCONNECT: {
         end_Logging();
-        os_printf("ws[%s][%u] disconnect: %u\n", server->url(), client->id());
+        Serial.printf("ws[%s][%u] disconnect: %u\n", server->url(), client->id());
       }
       break;
     case WS_EVT_ERROR:
-      os_printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
+      Serial.printf("ws[%s][%u] error(%u): %s\n", server->url(), client->id(), *((uint16_t*)arg), (char*)data);
       break;
     case WS_EVT_PONG:
-      os_printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");
+      Serial.printf("ws[%s][%u] pong[%u]: %s\n", server->url(), client->id(), len, (len)?(char*)data:"");
       break;
     case WS_EVT_DATA: {
       //data packet
       AwsFrameInfo * info = (AwsFrameInfo*)arg;
       if(info->final && info->index == 0 && info->len == len) {
         //the whole message is in a single frame and we got all of it's data
-        os_printf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
+        Serial.printf("ws[%s][%u] %s-message[%llu] : '%s'\n", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len, (info->opcode == WS_TEXT)? std::string((const char*) data, len).c_str():"binary");
         if(info->opcode == WS_TEXT) {
           if (strncmp((const char *)data, "onToggleLogBtn", len) == 0) {
-            if (logging == 0) {
-              start_Logging();
-            } else {
-              end_Logging();
-            }
+              logging_toggled = 1;
+          } else if (strncmp((const char *)data, "onToggleUVLEDBtn", len) == 0) {
+              ledUV_toggled = 1;
+          } else if (strncmp((const char *)data, "onToggleWhiteLEDBtn", len) == 0) {
+              ledWhite_toggled = 1;
+          } else if (strncmp((const char *)data, "onToggleIRLEDBtn", len) == 0) {
+              ledIR_toggled = 1;
           }
         }
       } else {
@@ -215,6 +225,13 @@ void end_Logging() {
 }
 
 void sensor_loop() {
+  if (logging_toggled > 0) {
+      if (logging == 0)
+          start_Logging();
+      else
+          end_Logging();
+      logging_toggled = 0;
+  }
   if (logging) {
     if (sensor.dataAvailable()) {
         elapsedIdle = 0;
@@ -226,6 +243,13 @@ void sensor_loop() {
       end_Logging();
     }
   } else {
+    if (ledUV_toggled > 0) ledUV.toggleUp();
+    ledUV_toggled = 0;
+    if (ledWhite_toggled > 0) ledWhite.toggleUp();
+    ledWhite_toggled = 0;
+    if (ledIR_toggled > 0) ledIR.toggleUp();
+    ledIR_toggled = 0;
+
     // When doing log saving, it stops updating webSocket.
     if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
@@ -275,9 +299,9 @@ void start_Sensor() {
   sensor.setGain(AS7265X_GAIN_64X); // default
 
   sensor.enableIndicator();
-  sensor.disableBulb(AS7265x_LED_WHITE);
-  sensor.disableBulb(AS7265x_LED_IR);
-  sensor.disableBulb(AS7265x_LED_UV);
+  ledWhite.init(&sensor, AS7265x_LED_WHITE, AS7265X_LED_CURRENT_LIMIT_25MA);
+  ledUV.init(&sensor, AS7265x_LED_UV, AS7265X_LED_CURRENT_LIMIT_25MA);
+  ledIR.init(&sensor, AS7265x_LED_IR);
 }
 
 

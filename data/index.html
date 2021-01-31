@@ -15,8 +15,13 @@
     </div>
     <div style="text-align:center;">
       <p>
-        <button id="toggleLogBtn" class="button">Start Logging</button>
-        <button id="downloadLogfileBtn" class="button button-hidden">Download Logfile</button>
+        <button id="ToggleLogBtn" class="button">Start Logging</button>
+        <button id="DownloadLogfileBtn" class="button button-hidden">Download Logfile</button>
+      </p>
+      <p>
+        <button id="ToggleUVLEDBtn" class="button">UV</button>
+        <button id="ToggleWhiteLEDBtn" class="button">White</button>
+        <button id="ToggleIRLEDBtn" class="button">IR</button>
       </p>
     </div>
 
@@ -80,8 +85,8 @@
       });
       // chart.defaults.global.defaultFontColor = "rgba(192, 192, 192, 1.0)";
 
-      let toggleLogButton = document.getElementById('toggleLogBtn');
-      let downloadLogfileBtn = document.getElementById('downloadLogfileBtn');
+      let toggleLogBtn = document.getElementById('ToggleLogBtn');
+      let downloadLogfileBtn = document.getElementById('DownloadLogfileBtn');
       let ws;
 
       function initWebSocket() {
@@ -144,15 +149,17 @@
       }
 
       function initButtons() {
-        toggleLogBtn.addEventListener('click', onToggleLogBtn);
+        const btnList = document.getElementsByClassName('button');
+        for (const btn of btnList) {
+          btn.addEventListener("click", function(){
+            const idstr = 'on' + btn.id;
+            ws.send(idstr);
+          });
+        }
         downloadLogfileBtn.addEventListener('click', onDownloadLogfileBtn);
       }
 
-      function onToggleLogBtn(){
-        ws.send('onToggleLogBtn');
-      }
       function onDownloadLogfileBtn() {
-        // document.location.assign(downloadLogfileBtn.href);
         window.open(downloadLogfileBtn.href, '_blank');
       }
     </script>
