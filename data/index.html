@@ -27,7 +27,6 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js" integrity="sha512-d9xgZrVZpmmQlfonhQUvTR7lMPtO7NkZMkA0ABN3PHCbKA5nqylQ/yWlFAyY6hYgdF1Qh6nYiuADWwKB4C2WSw==" crossorigin="anonymous"></script>
     <script>
-      let loaded = false;
       const nms = [410,435,460,485,510,535,560,585,610,645,680,705,730,760,810,860,900,940];
       const vCH = ['vA','vB','vC','vD','vE','vF','vG','vH','vR','vI','vS','vJ','vT','vU','vV','vW','vK','vL'];
 
@@ -143,7 +142,6 @@
       window.addEventListener('load', onLoad);
 
       function onLoad(event) {
-        loaded = true;
         initWebSocket();
         initButtons();
       }

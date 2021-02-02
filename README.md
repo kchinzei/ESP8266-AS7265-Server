@@ -24,7 +24,7 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 
 - ESP8266 2MB flash or more.
 - [SparkFun Triad Spectroscopy Sensor - AS7265x](https://www.sparkfun.com/products/15050)
-- [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
+- [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) - see note below
 - [Arduino core for ESP8266 WiFi chip](https://github.com/esp8266/Arduino)
 - [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 - [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
@@ -32,6 +32,10 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 - [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin) or equivalent
 - [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
 
+#### [Feb-03, 2020] Workaround for a bug in [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
+
+[AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) has a bug around the indicator LED that affects its while LED bulb.
+While a bug fix has been pull-requested already, please use [my fix here](https://github.com/kchinzei/SparkFun_AS7265x_Arduino_Library) until the patch to be applied.
 
 ## Installation
 
@@ -51,7 +55,7 @@ Very simplified flow is like this:
 
 ## To Dos
 
-- AS7265x setting panel (gain, LED on/off)
+- AS7265x setting panel (gain, LED brightness indicators)
 - [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)
 
 ## References

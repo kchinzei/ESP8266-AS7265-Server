@@ -103,7 +103,7 @@ void start_Logging();
 void end_Logging();
 
 // WebSocket staff
-// Mostly based on Pieter's Beginner's Guide, thank you!
+// https://github.com/me-no-dev/ESPAsyncWebServer#async-websocket-plugin
 
 void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
   switch (type) {
@@ -129,7 +129,7 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
       AwsFrameInfo * info = (AwsFrameInfo*)arg;
       if(info->final && info->index == 0 && info->len == len) {
         //the whole message is in a single frame and we got all of it's data
-        Serial.printf("ws[%s][%u] %s-message[%llu] : '%s'\n", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len, (info->opcode == WS_TEXT)? std::string((const char*) data, len).c_str():"binary");
+        //Serial.printf("ws[%s][%u] %s-message[%llu] : '%s'\n", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len, (info->opcode == WS_TEXT)? std::string((const char*) data, len).c_str():"binary");
         if(info->opcode == WS_TEXT) {
           if (strncmp((const char *)data, "onToggleLogBtn", len) == 0) {
               logging_toggled = 1;
@@ -295,13 +295,13 @@ void start_Sensor() {
   // Once the sensor is started we can increase the I2C speed
   Wire.setClock(400000);
   sensor.setIntegrationCycles(49); // 50 integration; 140 msec per cycle, default
-  sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
   sensor.setGain(AS7265X_GAIN_64X); // default
+  sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
 
-  sensor.enableIndicator();
+  sensor.disableIndicator();
+  ledUV.init(&sensor, AS7265x_LED_UV, AS7265X_LED_CURRENT_LIMIT_12_5MA);
   ledWhite.init(&sensor, AS7265x_LED_WHITE, AS7265X_LED_CURRENT_LIMIT_25MA);
-  ledUV.init(&sensor, AS7265x_LED_UV, AS7265X_LED_CURRENT_LIMIT_25MA);
-  ledIR.init(&sensor, AS7265x_LED_IR);
+  ledIR.init(&sensor, AS7265x_LED_IR, AS7265X_LED_CURRENT_LIMIT_25MA);
 }
 
 

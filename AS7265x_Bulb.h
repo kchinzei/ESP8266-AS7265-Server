@@ -69,7 +69,7 @@ public:
             if (current_index == 1)
                 sensor->enableBulb(bulbtype);
         }
-        // Serial.printf(" -- bulb %d state %d (%.1fmA) \n", bulbtype, getState(), getCurrent());
+        // print_bulb();
     }
     
     void init(AS7265X *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
@@ -77,15 +77,16 @@ public:
         bulbtype = ledtype;
         
         // Set H/W limit
+        // https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library/blob/master/examples/Example3_Settings/Example3_Settings.ino
         switch (ledtype) {
         case AS7265x_LED_WHITE:
             current_limit_index = 5; // no limit
             break;
         case AS7265x_LED_IR:
-            current_limit_index = 2; // 25 mA not allowed
+            current_limit_index = 4; // 100 mA not allowed
             break;
         case AS7265x_LED_UV:
-            current_limit_index = 4; // 100 mA not allowed
+            current_limit_index = 2; // 25 mA not allowed
             break;
         default:
             // error. can typeguard by enum ledtype but not that serious.
@@ -130,6 +131,17 @@ public:
             }
         }
         return mA;
+    }
+
+    void print_bulb() {
+        Serial.print(" -- bulb [");
+        Serial.print(bulbtype);
+        Serial.print("] state: ");
+        Serial.print(getState());
+        Serial.print(" (");
+        Serial.print(getCurrent());
+        Serial.print("mA)");
+        Serial.println();
     }
 
 protected:
