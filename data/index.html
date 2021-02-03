@@ -19,9 +19,10 @@
         <button id="DownloadLogfileBtn" class="button button-hidden">Download Logfile</button>
       </p>
       <p>
-        <button id="ToggleUVLEDBtn" class="button">UV</button>
-        <button id="ToggleWhiteLEDBtn" class="button">White</button>
-        <button id="ToggleIRLEDBtn" class="button">IR</button>
+        <button id="ToggleUVLEDBtn" class="button">UV 0</button>
+        <button id="ToggleWhiteLEDBtn" class="button">White 0</button>
+        <button id="ToggleIRLEDBtn" class="button">IR 0</button>
+        <button id="ToggleCalBtn" class="button">Cal</button>
       </p>
     </div>
 
@@ -95,6 +96,12 @@
           let args = evt.data.split(' ');
           let arg0 = args[0];
           switch (arg0) {
+          case 'btnMessage':
+            // arg[1] for id of a button
+            // arg[2...end] is a display text of the button
+            let btn = document.getElementById(args[1]);
+            btn.innerHTML = args.slice(2).join(' ');
+            break;
           case 'loggingStarted':
             toggleLogBtn.innerHTML = 'Stop Logging';
             break;
@@ -122,6 +129,7 @@
         }
 
         ws.onopen = function(evt) {
+          ws.send('init');
           console.log("ws: onpen");
         }
       
@@ -142,8 +150,8 @@
       window.addEventListener('load', onLoad);
 
       function onLoad(event) {
-        initWebSocket();
         initButtons();
+        initWebSocket();
       }
 
       function initButtons() {

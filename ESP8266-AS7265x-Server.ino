@@ -89,6 +89,12 @@ const char *OTAName = "ESP8266";
 const char *OTAPassword = "you_must_set_your_pw";
 const char *mdnsName = "esp8266";
 
+const char *btnMessage = "btnMessage";
+const char *toggleUVLEDBtn = "ToggleUVLEDBtn";
+const char *toggleWhiteLEDBtn = "ToggleWhiteLEDBtn";
+const char *toggleIRLEDBtn = "ToggleIRLEDBtn";
+const char *toggleCalBtn = "ToggleCalBtn";
+
 /*
  This program runs in two modes, logging mode and idle mode, according to logging = 1/0.
  In logging mode, it samples fast from AS7265X, write to the log file and stop updating the chart.
@@ -99,6 +105,8 @@ int logging_toggled = 0;
 int ledUV_toggled = 0;
 int ledWhite_toggled = 0;
 int ledIR_toggled = 0;
+int cal_toggled = 0;
+int cal_apply = 1;
 void start_Logging();
 void end_Logging();
 
@@ -139,6 +147,14 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
               ledWhite_toggled = 1;
           } else if (strncmp((const char *)data, "onToggleIRLEDBtn", len) == 0) {
               ledIR_toggled = 1;
+          } else if (strncmp((const char *)data, "onToggleCalBtn", len) == 0) {
+              cal_toggled = 1;
+          } else if (strncmp((const char *)data, "init", len) == 0) {
+            notifyLoggingStatus();
+            notifyLEDBtn(&ledWhite);
+            notifyLEDBtn(&ledIR);
+            notifyLEDBtn(&ledUV);
+            notifyCalBtn();
           }
         }
       } else {
@@ -158,7 +174,7 @@ char * WebSocketMsg_LoggingEnded   = "loggingEnded";
 char * WebSocketMsg_EnableDownloadLogFile  = "enableDownloadLogfile";
 char * WebSocketMsg_DisableDownloadLogFile = "disableDownloadLogfile";
 
-void notifySocketStatus() {
+void notifyLoggingStatus() {
   char *payload;
   if (logging == 0) {
     payload = WebSocketMsg_LoggingEnded;
@@ -210,7 +226,7 @@ void start_Logging() {
 
   elapsedLogtime = 0;
   logging = 1;
-  notifySocketStatus();
+  notifyLoggingStatus();
 }
 
 void end_Logging() {
@@ -221,7 +237,30 @@ void end_Logging() {
   sensor.setIntegrationCycles(49); // 50 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
   logging = 0;
-  notifySocketStatus();
+  notifyLoggingStatus();
+}
+
+void notifyLEDBtn(AS7265xBulb *bulb) {
+  char buf[64];
+  const char *btn = toggleWhiteLEDBtn;
+
+  switch (bulb->getBulbtype()) {
+    case AS7265x_LED_IR:
+      btn = toggleIRLEDBtn;
+      break;
+    case AS7265x_LED_UV:
+      btn = toggleUVLEDBtn;
+      break;
+  }
+  sprintf(buf, "%s %s %s %d", btnMessage, btn, bulb->getBulbtypeString(), bulb->getCurrentIndex());
+  webSocket.textAll(buf, strlen(buf));
+}
+
+void notifyCalBtn() {
+  char buf[64];
+  const char* s = cal_apply? "Cal":"Raw";
+  sprintf(buf, "%s %s %s", btnMessage, toggleCalBtn, s);
+  webSocket.textAll(buf, strlen(buf));
 }
 
 void sensor_loop() {
@@ -243,13 +282,26 @@ void sensor_loop() {
       end_Logging();
     }
   } else {
-    if (ledUV_toggled > 0) ledUV.toggleUp();
-    ledUV_toggled = 0;
-    if (ledWhite_toggled > 0) ledWhite.toggleUp();
-    ledWhite_toggled = 0;
-    if (ledIR_toggled > 0) ledIR.toggleUp();
-    ledIR_toggled = 0;
-
+    if (ledUV_toggled > 0) {
+      ledUV.toggleUp();
+      notifyLEDBtn(&ledUV);
+      ledUV_toggled = 0;
+    }
+    if (ledWhite_toggled > 0) {
+      ledWhite.toggleUp();
+      notifyLEDBtn(&ledWhite);
+      ledWhite_toggled = 0;
+    }
+    if (ledIR_toggled > 0) {
+      ledIR.toggleUp();
+      notifyLEDBtn(&ledIR);
+      ledIR_toggled = 0;
+    }
+    if (cal_toggled > 0) {
+      cal_apply = !cal_apply;
+      notifyCalBtn();
+      cal_toggled = 0;
+    }
     // When doing log saving, it stops updating webSocket.
     if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
@@ -264,7 +316,8 @@ void sensor_loop() {
 
 const char *sensor_sampling(const char *formatstr) {
   static char _payload[360]; // Possible max is 4294967296.0 = 2^32, and format will safely fit.
-  snprintf_P(_payload, sizeof(_payload), formatstr,
+  if (cal_apply)
+    snprintf_P(_payload, sizeof(_payload), formatstr,
              sensor.getCalibratedA(),
              sensor.getCalibratedB(),
              sensor.getCalibratedC(),
@@ -283,6 +336,26 @@ const char *sensor_sampling(const char *formatstr) {
              sensor.getCalibratedW(),
              sensor.getCalibratedK(),
              sensor.getCalibratedL());
+  else
+    snprintf_P(_payload, sizeof(_payload), formatstr,
+             (float) sensor.getA(),
+             (float) sensor.getB(),
+             (float) sensor.getC(),
+             (float) sensor.getD(),
+             (float) sensor.getE(),
+             (float) sensor.getF(),
+             (float) sensor.getG(),
+             (float) sensor.getH(),
+             (float) sensor.getR(),
+             (float) sensor.getI(),
+             (float) sensor.getS(),
+             (float) sensor.getJ(),
+             (float) sensor.getT(),
+             (float) sensor.getU(),
+             (float) sensor.getV(),
+             (float) sensor.getW(),
+             (float) sensor.getK(),
+             (float) sensor.getL());
   return _payload;
 }
 

@@ -71,7 +71,7 @@ public:
         }
         // print_bulb();
     }
-    
+
     void init(AS7265X *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
         this->sensor = sensor;
         bulbtype = ledtype;
@@ -115,7 +115,27 @@ public:
     ~AS7265xBulb() {
         // You may want turn off it. But we don't know if sensor is still valid when this destructor called. Leave it as is.
     }
-    
+
+    uint8_t getBulbtype() { return bulbtype; }
+
+    const char *getBulbtypeString() {
+        const char *ret;
+        switch (bulbtype) {
+        case AS7265x_LED_WHITE:
+            ret = "White";
+            break;
+        case AS7265x_LED_IR:
+            ret = "IR";
+            break;
+        case AS7265x_LED_UV:
+            ret = "UV";
+            break;
+        }
+        return ret;
+    }
+
+    int getCurrentIndex() { return current_index; }
+
     float getCurrent() {
         float mA = 0;
         if (getState()) {
