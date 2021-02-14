@@ -67,8 +67,8 @@ const char* password_2 = "pssword2";
 
 #include <time.h>
 
-#include "SparkFun_AS7265X.h"
-AS7265X sensor;
+#include <AS726XX.h>
+AS726XX sensor;
 #include <Wire.h>
 #include <elapsedMillis.h>
 #include "bufferedFile.h"
@@ -94,6 +94,7 @@ const char *toggleUVLEDBtn = "ToggleUVLEDBtn";
 const char *toggleWhiteLEDBtn = "ToggleWhiteLEDBtn";
 const char *toggleIRLEDBtn = "ToggleIRLEDBtn";
 const char *toggleCalBtn = "ToggleCalBtn";
+const char *updateLabelsMessage = "updateLabels";
 
 /*
  This program runs in two modes, logging mode and idle mode, according to logging = 1/0.
@@ -150,6 +151,7 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
           } else if (strncmp((const char *)data, "onToggleCalBtn", len) == 0) {
               cal_toggled = 1;
           } else if (strncmp((const char *)data, "init", len) == 0) {
+            notifyUpdateLabels();
             notifyLoggingStatus();
             notifyLEDBtn(&ledWhite);
             notifyLEDBtn(&ledIR);
@@ -195,9 +197,85 @@ void notifyLoggingStatus() {
 
 
 // Logging staff
-const char SENSOR_JSON[] PROGMEM = R"=====({"vA":%5.1f,"vB":%5.1f,"vC":%5.1f,"vD":%5.1f,"vE":%5.1f,"vF":%5.1f,"vG":%5.1f,"vH":%5.1f,"vR":%5.1f,"vI":%5.1f,"vS":%5.1f,"vJ":%5.1f,"vT":%5.1f,"vU":%5.1f,"vV":%5.1f,"vW":%5.1f,"vK":%5.1f,"vL":%5.1f})=====";
-const char SENSOR_CSV[] PROGMEM = "%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f,%5.2f\r\n";
-const char SENSOR_CSV_HEADER[] PROGMEM = "410,435,460,485,510,535,560,585,610,645,680,705,730,760,810,860,900,940\r\n";
+
+String getLabelsString() {
+  String s = "";
+  uint16_t v = 0;
+  if (v = sensor.getAnm()) { s += v; s += ","; }
+  if (v = sensor.getBnm()) { s += v; s += ","; }
+  if (v = sensor.getCnm()) { s += v; s += ","; }
+  if (v = sensor.getDnm()) { s += v; s += ","; }
+  if (v = sensor.getEnm()) { s += v; s += ","; }
+  if (v = sensor.getFnm()) { s += v; s += ","; }
+
+  if (v = sensor.getGnm()) { s += v; s += ","; }
+  if (v = sensor.getHnm()) { s += v; s += ","; }
+  if (v = sensor.getInm()) { s += v; s += ","; }
+  if (v = sensor.getJnm()) { s += v; s += ","; }
+  if (v = sensor.getKnm()) { s += v; s += ","; }
+  if (v = sensor.getLnm()) { s += v; s += ","; }
+
+  if (v = sensor.getRnm()) { s += v; s += ","; }
+  if (v = sensor.getSnm()) { s += v; s += ","; }
+  if (v = sensor.getTnm()) { s += v; s += ","; }
+  if (v = sensor.getUnm()) { s += v; s += ","; }
+  if (v = sensor.getVnm()) { s += v; s += ","; }
+  if (v = sensor.getWnm()) { s += v; s += ","; }
+  s.remove(s.length()-1);
+  return s;
+}
+
+String getCalibratedString() {
+  String s = "";
+  if (sensor.getAnm()) { s += String(sensor.getCalibratedA(), 2); s += ","; }
+  if (sensor.getBnm()) { s += String(sensor.getCalibratedB(), 2); s += ","; }
+  if (sensor.getCnm()) { s += String(sensor.getCalibratedC(), 2); s += ","; }
+  if (sensor.getDnm()) { s += String(sensor.getCalibratedD(), 2); s += ","; }
+  if (sensor.getEnm()) { s += String(sensor.getCalibratedE(), 2); s += ","; }
+  if (sensor.getFnm()) { s += String(sensor.getCalibratedF(), 2); s += ","; }
+
+  if (sensor.getGnm()) { s += String(sensor.getCalibratedG(), 2); s += ","; }
+  if (sensor.getHnm()) { s += String(sensor.getCalibratedH(), 2); s += ","; }
+  if (sensor.getInm()) { s += String(sensor.getCalibratedI(), 2); s += ","; }
+  if (sensor.getJnm()) { s += String(sensor.getCalibratedJ(), 2); s += ","; }
+  if (sensor.getKnm()) { s += String(sensor.getCalibratedK(), 2); s += ","; }
+  if (sensor.getLnm()) { s += String(sensor.getCalibratedL(), 2); s += ","; }
+
+  if (sensor.getRnm()) { s += String(sensor.getCalibratedR(), 2); s += ","; }
+  if (sensor.getSnm()) { s += String(sensor.getCalibratedS(), 2); s += ","; }
+  if (sensor.getTnm()) { s += String(sensor.getCalibratedT(), 2); s += ","; }
+  if (sensor.getUnm()) { s += String(sensor.getCalibratedU(), 2); s += ","; }
+  if (sensor.getVnm()) { s += String(sensor.getCalibratedV(), 2); s += ","; }
+  if (sensor.getWnm()) { s += String(sensor.getCalibratedW(), 2); s += ","; }
+  s.remove(s.length()-1);
+  return s;
+}
+
+String getRawString() {
+  String s = "";
+  if (sensor.getAnm()) { s += sensor.getA(); s += ","; }
+  if (sensor.getBnm()) { s += sensor.getB(); s += ","; }
+  if (sensor.getCnm()) { s += sensor.getC(); s += ","; }
+  if (sensor.getDnm()) { s += sensor.getD(); s += ","; }
+  if (sensor.getEnm()) { s += sensor.getE(); s += ","; }
+  if (sensor.getFnm()) { s += sensor.getF(); s += ","; }
+
+  if (sensor.getGnm()) { s += sensor.getG(); s += ","; }
+  if (sensor.getHnm()) { s += sensor.getH(); s += ","; }
+  if (sensor.getInm()) { s += sensor.getI(); s += ","; }
+  if (sensor.getJnm()) { s += sensor.getJ(); s += ","; }
+  if (sensor.getKnm()) { s += sensor.getK(); s += ","; }
+  if (sensor.getLnm()) { s += sensor.getL(); s += ","; }
+
+  if (sensor.getRnm()) { s += sensor.getR(); s += ","; }
+  if (sensor.getSnm()) { s += sensor.getS(); s += ","; }
+  if (sensor.getTnm()) { s += sensor.getT(); s += ","; }
+  if (sensor.getUnm()) { s += sensor.getU(); s += ","; }
+  if (sensor.getVnm()) { s += sensor.getV(); s += ","; }
+  if (sensor.getWnm()) { s += sensor.getW(); s += ","; }
+  s.remove(s.length()-1);
+  return s;
+}
 
 elapsedMillis elapsedIdle;
 elapsedMillis elapsedLogtime;
@@ -215,7 +293,8 @@ void start_Logging() {
   logFilename += getCurrentTimeStr();
   logFilename += ".csv";
   fpLogging.open(logFilename);
-  fpLogging.write_P((const uint8_t *)SENSOR_CSV_HEADER, strlen_P(SENSOR_CSV_HEADER));
+  fpLogging.write(getLabelsString());
+  fpLogging.write((const uint8_t*)"\r\n", strlen("\r\n"));
 
   // After some experiments it seems that sampling speed isn't fast as expected
   // by setting it to 1, 9. Reason unclear - because of many tasks in loop()?
@@ -238,6 +317,13 @@ void end_Logging() {
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
   logging = 0;
   notifyLoggingStatus();
+}
+
+void notifyUpdateLabels() {
+  char buf[128];
+  String s = getLabelsString();
+  sprintf(buf, "%s %s", updateLabelsMessage, s.c_str());
+  webSocket.textAll(buf, strlen(buf));
 }
 
 void notifyLEDBtn(AS7265xBulb *bulb) {
@@ -274,8 +360,13 @@ void sensor_loop() {
   if (logging) {
     if (sensor.dataAvailable()) {
         elapsedIdle = 0;
-        const char *s = sensor_sampling(SENSOR_CSV);
-        fpLogging.write((const uint8_t *)s, strlen(s));
+        String s;
+        if (cal_apply)
+          s = getCalibratedString();
+        else
+          s = getRawString();
+        fpLogging.write(s);
+        fpLogging.write((const uint8_t*)"\r\n", strlen("\r\n"));
         logging++;
     }
     if (elapsedLogtime > maxLogtime) {
@@ -305,58 +396,17 @@ void sensor_loop() {
     // When doing log saving, it stops updating webSocket.
     if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
-      const char *s = sensor_sampling(SENSOR_JSON);
+      String s;
+      if (cal_apply)
+        s = getCalibratedString();
+      else
+        s = getRawString();
       sensor.enableIndicator();
-      webSocket.textAll(s, strlen(s));
+      webSocket.textAll(s.c_str(), s.length());
       sensor.disableIndicator();
       sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
     }
   }
-}
-
-const char *sensor_sampling(const char *formatstr) {
-  static char _payload[360]; // Possible max is 4294967296.0 = 2^32, and format will safely fit.
-  if (cal_apply)
-    snprintf_P(_payload, sizeof(_payload), formatstr,
-             sensor.getCalibratedA(),
-             sensor.getCalibratedB(),
-             sensor.getCalibratedC(),
-             sensor.getCalibratedD(),
-             sensor.getCalibratedE(),
-             sensor.getCalibratedF(),
-             sensor.getCalibratedG(),
-             sensor.getCalibratedH(),
-             sensor.getCalibratedR(),
-             sensor.getCalibratedI(),
-             sensor.getCalibratedS(),
-             sensor.getCalibratedJ(),
-             sensor.getCalibratedT(),
-             sensor.getCalibratedU(),
-             sensor.getCalibratedV(),
-             sensor.getCalibratedW(),
-             sensor.getCalibratedK(),
-             sensor.getCalibratedL());
-  else
-    snprintf_P(_payload, sizeof(_payload), formatstr,
-             (float) sensor.getA(),
-             (float) sensor.getB(),
-             (float) sensor.getC(),
-             (float) sensor.getD(),
-             (float) sensor.getE(),
-             (float) sensor.getF(),
-             (float) sensor.getG(),
-             (float) sensor.getH(),
-             (float) sensor.getR(),
-             (float) sensor.getI(),
-             (float) sensor.getS(),
-             (float) sensor.getJ(),
-             (float) sensor.getT(),
-             (float) sensor.getU(),
-             (float) sensor.getV(),
-             (float) sensor.getW(),
-             (float) sensor.getK(),
-             (float) sensor.getL());
-  return _payload;
 }
 
 void start_Sensor() {

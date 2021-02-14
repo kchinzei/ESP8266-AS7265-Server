@@ -14,7 +14,7 @@ AS7265x has three optical sensors to obtain 18-band spectroscopic intensity betw
 
 ![AS7265x](https://cdn.sparkfun.com/r/500-500/assets/parts/1/3/3/9/3/15050-SparkFun_Triad_Spectroscopy_Sensor_-_AS7265x__Qwiic_-01.jpg "Overview of AS7265x")
 
-My personal interest is to use it to measure the chromaticity of LEDs in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. I need to do it in a dark room, that's why the chart is in very dark mode.
+My personal interest is to use it to measure the chromaticity of LEDs in my [kch-rgbw-lib](https://github.com/kchinzei/kch-rgbw-lib) to accurately calculate composite LED colors. I need to do it in a dark room, that's why the chart is in very dark tone.
 
 ### On accuracy of AS7265x
 
@@ -25,6 +25,7 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 - ESP8266 2MB flash or more.
 - [SparkFun Triad Spectroscopy Sensor - AS7265x](https://www.sparkfun.com/products/15050)
 - [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) - see note below
+- [AS726x Arduino Library](https://github.com/sparkfun/Sparkfun_AS726X_Arduino_Library)
 - [Arduino core for ESP8266 WiFi chip](https://github.com/esp8266/Arduino)
 - [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 - [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
@@ -32,10 +33,15 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 - [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin) or equivalent
 - [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
 
-#### [Feb-03, 2020] Workaround for a bug in [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
+#### [Feb-03, 2020] Workaround for a bug in [AS7265x Arduino
+Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
 
 [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) has a bug around the indicator LED that affects its while LED bulb.
 While a bug fix has been pull-requested already, please use [my fix here](https://github.com/kchinzei/SparkFun_AS7265x_Arduino_Library) until the patch to be applied.
+
+#### AS7262/7263 Support
+
+This branch can also work with AS7262/7263 breakout boards. You need to download my [AS726XX-CommonLib](https://github.com/kchinzei/AS726XX-CommonLib) and put AS726XX-CommonLib folder in your Arduino libraries directory.
 
 ## Installation
 

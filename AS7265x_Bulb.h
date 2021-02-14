@@ -25,9 +25,9 @@
 */
 
 #ifndef _as7265x_bulb_h_
-#define _as7265x_hulb_h_
+#define _as7265x_bulb_h_
 
-#include "SparkFun_AS7265X.h"
+#include "AS726XX.h"
 
 static uint8_t AS7265xBulb_Current[] = {0,
     AS7265X_LED_CURRENT_LIMIT_12_5MA,
@@ -72,33 +72,35 @@ public:
         // print_bulb();
     }
 
-    void init(AS7265X *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
+    void init(AS726XX *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
         this->sensor = sensor;
         bulbtype = ledtype;
-        
-        // Set H/W limit
-        // https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library/blob/master/examples/Example3_Settings/Example3_Settings.ino
-        switch (ledtype) {
-        case AS7265x_LED_WHITE:
-            current_limit_index = 5; // no limit
-            break;
-        case AS7265x_LED_IR:
-            current_limit_index = 4; // 100 mA not allowed
-            break;
-        case AS7265x_LED_UV:
-            current_limit_index = 2; // 25 mA not allowed
-            break;
-        default:
-            // error. can typeguard by enum ledtype but not that serious.
-            exit(1);
-            break;
-        }
-        // Apply user-set limit if it's smaller than H/W limit
-        int i;
-        for (i=1; i<current_limit_index; i++) {
-            if (AS7265xBulb_Current[i] == limit) {
-                current_limit_index = i+1;
+
+        if (sensor->isBulbAvailable(ledtype)) {
+            // Set H/W limit
+            // https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library/blob/master/examples/Example3_Settings/Example3_Settings.ino
+            switch (ledtype) {
+            case AS7265x_LED_WHITE:
+                current_limit_index = 5; // no limit
                 break;
+            case AS7265x_LED_IR:
+                current_limit_index = 4; // 100 mA not allowed
+                break;
+            case AS7265x_LED_UV:
+                current_limit_index = 2; // 25 mA not allowed
+                break;
+            default:
+                // error. you can typeguard by enum ledtype but not that serious.
+                exit(1);
+                break;
+            }
+            // Apply user-set limit if it's smaller than H/W limit
+            int i;
+            for (i=1; i<current_limit_index; i++) {
+                if (AS7265xBulb_Current[i] == limit) {
+                    current_limit_index = i+1;
+                    break;
+                }
             }
         }
         current_index = 0;
@@ -165,7 +167,7 @@ public:
     }
 
 protected:
-    AS7265X *sensor;
+    AS726XX *sensor;
     uint8_t bulbtype;
     int current_index;
     int current_limit_index;

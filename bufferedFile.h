@@ -79,6 +79,9 @@ public:
         return !!this->_fp;
     }
 
+    size_t write(const String s) {
+        return _write((const uint8_t*)s.c_str(), s.length(), memcpy);
+    }
     size_t write(const uint8_t *buf, size_t length) {
         return _write(buf, length, memcpy);
     }
