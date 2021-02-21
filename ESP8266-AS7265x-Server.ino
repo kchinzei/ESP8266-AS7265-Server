@@ -67,6 +67,8 @@ const char* password_2 = "pssword2";
 
 #include <time.h>
 
+#include <SparkFun_AS7265X.h>
+#include <AS726X.h>
 #include <AS726XX.h>
 AS726XX sensor;
 #include <Wire.h>
@@ -200,6 +202,10 @@ void notifyLoggingStatus() {
 
 String getLabelsString() {
   String s = "";
+  for (auto itr=std::begin(sensor.nm); itr != std::end(sensor.nm); itr++) {
+    s += (*itr); s += ",";
+  }
+/*
   uint16_t v = 0;
   if (v = sensor.getAnm()) { s += v; s += ","; }
   if (v = sensor.getBnm()) { s += v; s += ","; }
@@ -221,12 +227,17 @@ String getLabelsString() {
   if (v = sensor.getUnm()) { s += v; s += ","; }
   if (v = sensor.getVnm()) { s += v; s += ","; }
   if (v = sensor.getWnm()) { s += v; s += ","; }
+  */
   s.remove(s.length()-1);
   return s;
 }
 
 String getCalibratedString() {
   String s = "";
+  for (auto itr=std::begin(sensor.getc); itr != std::end(sensor.getc); itr++) {
+    s += String((sensor.*(*itr))(), 2); s += ",";
+  }
+  /*
   if (sensor.getAnm()) { s += String(sensor.getCalibratedA(), 2); s += ","; }
   if (sensor.getBnm()) { s += String(sensor.getCalibratedB(), 2); s += ","; }
   if (sensor.getCnm()) { s += String(sensor.getCalibratedC(), 2); s += ","; }
@@ -247,12 +258,17 @@ String getCalibratedString() {
   if (sensor.getUnm()) { s += String(sensor.getCalibratedU(), 2); s += ","; }
   if (sensor.getVnm()) { s += String(sensor.getCalibratedV(), 2); s += ","; }
   if (sensor.getWnm()) { s += String(sensor.getCalibratedW(), 2); s += ","; }
+  */
   s.remove(s.length()-1);
   return s;
 }
 
 String getRawString() {
   String s = "";
+  for (auto itr=std::begin(sensor.getu); itr != std::end(sensor.getu); itr++) {
+    s += String((sensor.*(*itr))()); s += ",";
+  }
+  /*
   if (sensor.getAnm()) { s += sensor.getA(); s += ","; }
   if (sensor.getBnm()) { s += sensor.getB(); s += ","; }
   if (sensor.getCnm()) { s += sensor.getC(); s += ","; }
@@ -273,6 +289,7 @@ String getRawString() {
   if (sensor.getUnm()) { s += sensor.getU(); s += ","; }
   if (sensor.getVnm()) { s += sensor.getV(); s += ","; }
   if (sensor.getWnm()) { s += sensor.getW(); s += ","; }
+  */
   s.remove(s.length()-1);
   return s;
 }

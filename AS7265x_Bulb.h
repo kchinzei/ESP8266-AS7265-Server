@@ -27,7 +27,16 @@
 #ifndef _as7265x_bulb_h_
 #define _as7265x_bulb_h_
 
-#include "AS726XX.h"
+#ifdef _AS726XX_H
+  #define AS726XX_CLASS AS726XX
+#elif defined(_SPARKFUN_AS7265X_H)
+  #define AS726XX_CLASS AS7265X
+#elif defined(_AS726X_h)
+  #define AS726XX_CLASS AS726X
+#else
+  Please include all or either of AS726XX.h, SparkFun_AS7265X.h and/or AS726X.h before including this file.
+#endif
+
 
 static uint8_t AS7265xBulb_Current[] = {0,
     AS7265X_LED_CURRENT_LIMIT_12_5MA,
@@ -72,7 +81,7 @@ public:
         // print_bulb();
     }
 
-    void init(AS726XX *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
+    void init(AS726XX_CLASS *sensor, uint8_t ledtype, uint8_t limit = 0b1111) {
         this->sensor = sensor;
         bulbtype = ledtype;
 
@@ -167,7 +176,7 @@ public:
     }
 
 protected:
-    AS726XX *sensor;
+    AS726XX_CLASS *sensor;
     uint8_t bulbtype;
     int current_index;
     int current_limit_index;

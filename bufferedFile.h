@@ -20,13 +20,13 @@
 /*
   bufferedFile class
 
-  When constructed it allocates good size of buffer in the heap and writes SPIFFS after the buffer fills or the filel closed.
-  It's intended to ease the wearing of ESP's flash memory. Writing a small chunk of data will increase the number of writing,
+  When constructed it allocates good size of buffer in the heap and writes SPIFFS after the buffer fills or the file closed.
+  It's intended to slow the wearing of ESP's flash memory. Writing a small chunk of data will increase the number of writing,
   resulting a shorter lifetime.
 
   Physical block/page and erase block size of flash memory varies by models/productions/lots. But I assume usually 256 bytes and 4KB.
   (https://www.esp32.com/viewtopic.php?t=561)
-  
+
   Make Asayake to Wake Project.
   Kiyo Chinzei
   https://github.com/kchinzei/ESP8266-AS7265-Server
@@ -53,7 +53,7 @@ public:
     bool open(const String filename) {
         return this->open(filename.c_str());
     }
-    
+
     bool open(const char *filename) {
         size_t heapsize = ESP.getFreeHeap();
 
@@ -92,7 +92,7 @@ public:
 
     size_t close() {
         size_t written = 0;
-        
+
         if (this->_buf) {
             size_t size_remain = this->_current - this->_buf;
             if (size_remain > 0) {
@@ -111,7 +111,7 @@ public:
     ~bufferedFile() {
         this->close();
     }
-    
+
 private:
     File _fp;
     size_t _size;
@@ -120,11 +120,11 @@ private:
 
     size_t _write(const uint8_t *buf, size_t length, void *(*memcpy_p)(void *dest, const void *src, size_t n)) {
         size_t written = 0;
-        
+
         if (this->_buf) {
             while (length) {
                 size_t size_extra = this->_size - (this->_current - this->_buf);
-                
+
                 if (length < size_extra) {
                     (*memcpy_p)(this->_current, buf, length);
                     this->_current += length;
