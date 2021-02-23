@@ -91,12 +91,18 @@ const char *OTAName = "ESP8266";
 const char *OTAPassword = "you_must_set_your_pw";
 const char *mdnsName = "esp8266";
 
-const char *btnMessage = "btnMessage";
+const char *updateBtn = "updateBtn";
 const char *toggleUVLEDBtn = "ToggleUVLEDBtn";
 const char *toggleWhiteLEDBtn = "ToggleWhiteLEDBtn";
 const char *toggleIRLEDBtn = "ToggleIRLEDBtn";
-const char *toggleCalBtn = "ToggleCalBtn";
 const char *updateLabelsMessage = "updateLabels";
+const char *updateRbtn = "updateRbtn";
+const char *calRbtn = "Cal-";
+const char *gainRbtn = "Gain-";
+
+#define C_CAL_CAL '0'
+#define C_CAL_RAW '1'
+#define C_GAIN_1X '0'
 
 /*
  This program runs in two modes, logging mode and idle mode, according to logging = 1/0.
@@ -108,8 +114,10 @@ int logging_toggled = 0;
 int ledUV_toggled = 0;
 int ledWhite_toggled = 0;
 int ledIR_toggled = 0;
-int cal_toggled = 0;
-int cal_apply = 1;
+boolean cal_changed = false;
+uint8_t cal = C_CAL_CAL;
+boolean gain_changed = false;
+uint8_t gain = AS7265X_GAIN_1X + C_GAIN_1X;
 void start_Logging();
 void end_Logging();
 
@@ -142,23 +150,30 @@ void onEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventTyp
         //the whole message is in a single frame and we got all of it's data
         //Serial.printf("ws[%s][%u] %s-message[%llu] : '%s'\n", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len, (info->opcode == WS_TEXT)? std::string((const char*) data, len).c_str():"binary");
         if(info->opcode == WS_TEXT) {
-          if (strncmp((const char *)data, "onToggleLogBtn", len) == 0) {
+          if (strncmp((const char *)data, "ToggleLogBtn", len) == 0) {
               logging_toggled = 1;
-          } else if (strncmp((const char *)data, "onToggleUVLEDBtn", len) == 0) {
+          } else if (strncmp((const char *)data, "ToggleUVLEDBtn", len) == 0) {
               ledUV_toggled = 1;
-          } else if (strncmp((const char *)data, "onToggleWhiteLEDBtn", len) == 0) {
+          } else if (strncmp((const char *)data, "ToggleWhiteLEDBtn", len) == 0) {
               ledWhite_toggled = 1;
-          } else if (strncmp((const char *)data, "onToggleIRLEDBtn", len) == 0) {
+          } else if (strncmp((const char *)data, "ToggleIRLEDBtn", len) == 0) {
               ledIR_toggled = 1;
-          } else if (strncmp((const char *)data, "onToggleCalBtn", len) == 0) {
-              cal_toggled = 1;
           } else if (strncmp((const char *)data, "init", len) == 0) {
             notifyUpdateLabels();
             notifyLoggingStatus();
             notifyLEDBtn(&ledWhite);
             notifyLEDBtn(&ledIR);
             notifyLEDBtn(&ledUV);
-            notifyCalBtn();
+            notifyCalRbtn();
+            notifyGainRbtn();
+          } else if (len > strlen(gainRbtn) && strncmp((const char *)data, gainRbtn, strlen(gainRbtn)) == 0) {
+            gain = data[strlen(gainRbtn)];
+            gain_changed = true;
+          } else if (len > strlen(calRbtn) && strncmp((const char *)data, calRbtn, strlen(calRbtn)) == 0) {
+            cal = data[strlen(calRbtn)];
+            cal_changed = true;
+          } else {
+            Serial.printf("uncaught - ws[%s][%u] : '%s'\n", server->url(), client->id(), std::string((const char*) data, len).c_str());
           }
         }
       } else {
@@ -205,29 +220,6 @@ String getLabelsString() {
   for (auto itr=std::begin(sensor.nm); itr != std::end(sensor.nm); itr++) {
     s += (*itr); s += ",";
   }
-/*
-  uint16_t v = 0;
-  if (v = sensor.getAnm()) { s += v; s += ","; }
-  if (v = sensor.getBnm()) { s += v; s += ","; }
-  if (v = sensor.getCnm()) { s += v; s += ","; }
-  if (v = sensor.getDnm()) { s += v; s += ","; }
-  if (v = sensor.getEnm()) { s += v; s += ","; }
-  if (v = sensor.getFnm()) { s += v; s += ","; }
-
-  if (v = sensor.getGnm()) { s += v; s += ","; }
-  if (v = sensor.getHnm()) { s += v; s += ","; }
-  if (v = sensor.getInm()) { s += v; s += ","; }
-  if (v = sensor.getJnm()) { s += v; s += ","; }
-  if (v = sensor.getKnm()) { s += v; s += ","; }
-  if (v = sensor.getLnm()) { s += v; s += ","; }
-
-  if (v = sensor.getRnm()) { s += v; s += ","; }
-  if (v = sensor.getSnm()) { s += v; s += ","; }
-  if (v = sensor.getTnm()) { s += v; s += ","; }
-  if (v = sensor.getUnm()) { s += v; s += ","; }
-  if (v = sensor.getVnm()) { s += v; s += ","; }
-  if (v = sensor.getWnm()) { s += v; s += ","; }
-  */
   s.remove(s.length()-1);
   return s;
 }
@@ -237,28 +229,6 @@ String getCalibratedString() {
   for (auto itr=std::begin(sensor.getc); itr != std::end(sensor.getc); itr++) {
     s += String((sensor.*(*itr))(), 2); s += ",";
   }
-  /*
-  if (sensor.getAnm()) { s += String(sensor.getCalibratedA(), 2); s += ","; }
-  if (sensor.getBnm()) { s += String(sensor.getCalibratedB(), 2); s += ","; }
-  if (sensor.getCnm()) { s += String(sensor.getCalibratedC(), 2); s += ","; }
-  if (sensor.getDnm()) { s += String(sensor.getCalibratedD(), 2); s += ","; }
-  if (sensor.getEnm()) { s += String(sensor.getCalibratedE(), 2); s += ","; }
-  if (sensor.getFnm()) { s += String(sensor.getCalibratedF(), 2); s += ","; }
-
-  if (sensor.getGnm()) { s += String(sensor.getCalibratedG(), 2); s += ","; }
-  if (sensor.getHnm()) { s += String(sensor.getCalibratedH(), 2); s += ","; }
-  if (sensor.getInm()) { s += String(sensor.getCalibratedI(), 2); s += ","; }
-  if (sensor.getJnm()) { s += String(sensor.getCalibratedJ(), 2); s += ","; }
-  if (sensor.getKnm()) { s += String(sensor.getCalibratedK(), 2); s += ","; }
-  if (sensor.getLnm()) { s += String(sensor.getCalibratedL(), 2); s += ","; }
-
-  if (sensor.getRnm()) { s += String(sensor.getCalibratedR(), 2); s += ","; }
-  if (sensor.getSnm()) { s += String(sensor.getCalibratedS(), 2); s += ","; }
-  if (sensor.getTnm()) { s += String(sensor.getCalibratedT(), 2); s += ","; }
-  if (sensor.getUnm()) { s += String(sensor.getCalibratedU(), 2); s += ","; }
-  if (sensor.getVnm()) { s += String(sensor.getCalibratedV(), 2); s += ","; }
-  if (sensor.getWnm()) { s += String(sensor.getCalibratedW(), 2); s += ","; }
-  */
   s.remove(s.length()-1);
   return s;
 }
@@ -268,28 +238,6 @@ String getRawString() {
   for (auto itr=std::begin(sensor.getu); itr != std::end(sensor.getu); itr++) {
     s += String((sensor.*(*itr))()); s += ",";
   }
-  /*
-  if (sensor.getAnm()) { s += sensor.getA(); s += ","; }
-  if (sensor.getBnm()) { s += sensor.getB(); s += ","; }
-  if (sensor.getCnm()) { s += sensor.getC(); s += ","; }
-  if (sensor.getDnm()) { s += sensor.getD(); s += ","; }
-  if (sensor.getEnm()) { s += sensor.getE(); s += ","; }
-  if (sensor.getFnm()) { s += sensor.getF(); s += ","; }
-
-  if (sensor.getGnm()) { s += sensor.getG(); s += ","; }
-  if (sensor.getHnm()) { s += sensor.getH(); s += ","; }
-  if (sensor.getInm()) { s += sensor.getI(); s += ","; }
-  if (sensor.getJnm()) { s += sensor.getJ(); s += ","; }
-  if (sensor.getKnm()) { s += sensor.getK(); s += ","; }
-  if (sensor.getLnm()) { s += sensor.getL(); s += ","; }
-
-  if (sensor.getRnm()) { s += sensor.getR(); s += ","; }
-  if (sensor.getSnm()) { s += sensor.getS(); s += ","; }
-  if (sensor.getTnm()) { s += sensor.getT(); s += ","; }
-  if (sensor.getUnm()) { s += sensor.getU(); s += ","; }
-  if (sensor.getVnm()) { s += sensor.getV(); s += ","; }
-  if (sensor.getWnm()) { s += sensor.getW(); s += ","; }
-  */
   s.remove(s.length()-1);
   return s;
 }
@@ -355,14 +303,18 @@ void notifyLEDBtn(AS7265xBulb *bulb) {
       btn = toggleUVLEDBtn;
       break;
   }
-  sprintf(buf, "%s %s %s %d", btnMessage, btn, bulb->getBulbtypeString(), bulb->getCurrentIndex());
+  sprintf(buf, "%s %s %s %d", updateBtn, btn, bulb->getBulbtypeString(), bulb->getCurrentIndex());
+  webSocket.textAll(buf, strlen(buf));
+}
+void notifyCalRbtn() {
+  char buf[64];
+  sprintf(buf, "%s %s%c", updateRbtn, calRbtn, cal);
   webSocket.textAll(buf, strlen(buf));
 }
 
-void notifyCalBtn() {
+void notifyGainRbtn() {
   char buf[64];
-  const char* s = cal_apply? "Cal":"Raw";
-  sprintf(buf, "%s %s %s", btnMessage, toggleCalBtn, s);
+  sprintf(buf, "%s %s%c", updateRbtn, gainRbtn, gain);
   webSocket.textAll(buf, strlen(buf));
 }
 
@@ -378,7 +330,8 @@ void sensor_loop() {
     if (sensor.dataAvailable()) {
         elapsedIdle = 0;
         String s;
-        if (cal_apply)
+        //if (cal_apply)
+        if (cal == C_CAL_CAL)
           s = getCalibratedString();
         else
           s = getRawString();
@@ -405,16 +358,20 @@ void sensor_loop() {
       notifyLEDBtn(&ledIR);
       ledIR_toggled = 0;
     }
-    if (cal_toggled > 0) {
-      cal_apply = !cal_apply;
-      notifyCalBtn();
-      cal_toggled = 0;
+    if (cal_changed) {
+      notifyCalRbtn();
+      cal_changed = false;
+    }
+    if (gain_changed) {
+      sensor.setGain(gain - C_GAIN_1X);
+      notifyGainRbtn();
+      gain_changed = false;
     }
     // When doing log saving, it stops updating webSocket.
     if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
       elapsedIdle = 0;
       String s;
-      if (cal_apply)
+      if (cal == C_CAL_CAL)
         s = getCalibratedString();
       else
         s = getRawString();

@@ -1,22 +1,27 @@
 body {
     font-family: Helvetica, Arial, Sans-serif;
-    font-size: 15px;
+    font-weight: bold;
+    font-size: 1.5rem;
     color: #f0f0f0;
     background-color: black;
 }
 
 /* https://saruwakakun.com/html-css/reference/buttons */
 
-.button {
+.ui {
   display: inline-block;
-  padding: 0.3em 1em;
-  margin: 5% 5% 0%;
   font-weight: bold;
-  text-decoration: none;
   font-size: 1.5rem;
-  color: #a0a0a0;
+  text-decoration: none;
+  color: #ffffff;
+  background: #808080;
   border: solid 2px #404040;
   border-radius: 6px;
+  padding: 0.3em 1em;
+}
+
+.button {
+  margin: 0% 3%;
   transition: .4s;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -39,3 +44,50 @@ body {
   opacity: 1;
   transition: visibility 0s linear 0s, opacity 500ms;
 }
+
+.center {
+  display: flex;
+  justify-content:center;
+}
+
+.rbtn-field {
+  display: flex;
+  overflow: hidden;
+}
+
+.rbtn-field input {
+  position: absolute !important;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  width: 1px;
+  border: 0;
+  overflow: hidden;
+}
+
+.rbtn-field label {
+  background: #404040;
+  line-height: 1;
+  margin-right: -1px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 0px;
+  transition: all 0.1s ease-in-out;
+}
+
+.switc-field label:hover {
+  cursor: pointer;
+}
+
+.rbtn-field input:checked + label {
+  background: #808080;
+  box-shadow: none;
+}
+
+.rbtn-field label:first-of-type {
+  border-radius: 6px 0 0 6px;
+}
+
+.rbtn-field label:last-of-type {
+  border-radius: 0 6px 6px 0;
+}
+
+span.sp5 { letter-spacing: 1rem; }

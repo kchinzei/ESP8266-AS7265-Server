@@ -15,15 +15,33 @@
     </div>
     <div style="text-align:center;">
       <p>
-        <button id="ToggleLogBtn" class="button">Start Logging</button>
-        <button id="DownloadLogfileBtn" class="button button-hidden">Download Logfile</button>
+        <button id="ToggleLogBtn" class="ui button">Start Logging</button>
+        <button id="DownloadLogfileBtn" class="ui button button-hidden">Download Logfile</button>
       </p>
       <p>
-        <button id="ToggleUVLEDBtn" class="button">UV 0</button>
-        <button id="ToggleWhiteLEDBtn" class="button">White 0</button>
-        <button id="ToggleIRLEDBtn" class="button">IR 0</button>
-        <button id="ToggleCalBtn" class="button">Cal</button>
+        <button id="ToggleUVLEDBtn" class="ui button">UV 0</button>
+        <button id="ToggleWhiteLEDBtn" class="ui button">White 0</button>
+        <button id="ToggleIRLEDBtn" class="ui button">IR 0</button>
       </p>
+      <div class="center">
+        <form class="rbtn-field">
+          <input type="radio" id="Cal-0" name="calibrate" value="c" checked/>
+          <label for="Cal-0" class="ui rbtn-label">Cal</label>
+          <input type="radio" id="Cal-1" name="calibrate" value="r" />
+          <label for="Cal-1" class="ui rbtn-label">Raw</label>
+        </form>
+        <span class="sp5">&nbsp;</span>
+        <form class="rbtn-field">
+          <input type="radio" id="Gain-0" name="amplitude" value="0" checked/>
+          <label for="Gain-0" class="ui rbtn-label">x1</label>
+          <input type="radio" id="Gain-1" name="amplitude" value="1" />
+          <label for="Gain-1" class="ui rbtn-label">x3.7</label>
+          <input type="radio" id="Gain-2" name="amplitude" value="2" />
+          <label for="Gain-2" class="ui rbtn-label">x16</label>
+          <input type="radio" id="Gain-3" name="amplitude" value="3" />
+          <label for="Gain-3" class="ui rbtn-label">x64</label>
+        </form>
+      </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js" integrity="sha512-d9xgZrVZpmmQlfonhQUvTR7lMPtO7NkZMkA0ABN3PHCbKA5nqylQ/yWlFAyY6hYgdF1Qh6nYiuADWwKB4C2WSw==" crossorigin="anonymous"></script>
@@ -102,11 +120,16 @@
           let args = evt.data.split(' ');
           let arg0 = args[0];
           switch (arg0) {
-          case 'btnMessage':
+          case 'updateBtn':
             // arg[1] for id of a button
             // arg[2...end] is a display text of the button
             let btn = document.getElementById(args[1]);
             btn.innerHTML = args.slice(2).join(' ');
+            break;
+          case 'updateRbtn':
+            // arg[1] for id of a radio button
+            let rbtn = document.getElementById(args[1]);
+            rbtn.checked = true;
             break;
           case 'loggingStarted':
             toggleLogBtn.innerHTML = 'Stop Logging';
@@ -171,14 +194,28 @@
       }
 
       function initButtons() {
+        // Button messages
         const btnList = document.getElementsByClassName('button');
         for (const btn of btnList) {
           btn.addEventListener("click", function(){
-            const idstr = 'on' + btn.id;
+            const idstr = btn.id;
             ws.send(idstr);
           });
         }
+        // Download button needs to send additional information
         downloadLogfileBtn.addEventListener('click', onDownloadLogfileBtn);
+
+        // Radio button messages
+        //  <input type="radio" id="rbtn-0" name="amplitude" value="0" checked/>
+        //  <label for="rbtn-0" class="ui rbtn-label">x1</label>
+        const labelList = document.getElementsByClassName('rbtn-label');
+        for (const l of labelList) {
+          l.addEventListener("click", function(){
+            const rbtn = l.control;
+            const idstr = rbtn.id + ' ' + rbtn.value;
+            ws.send(idstr);
+          });
+        }
       }
 
       function onDownloadLogfileBtn() {
