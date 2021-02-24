@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Hobby spectroscopy using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
+Hobby spectroscopy using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide) (and similar AMS sensors), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
 
 ![ESP8266-AS7265x-Server](./Artwortks/screenshot.png "Sample screen of ESP8266-AS7265x-Server")
 
@@ -23,9 +23,13 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 ## Requirements
 
 - ESP8266 2MB flash or more.
-- [SparkFun Triad Spectroscopy Sensor - AS7265x](https://www.sparkfun.com/products/15050)
-- [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) - see note below
-- [AS726x Arduino Library](https://github.com/sparkfun/Sparkfun_AS726X_Arduino_Library)
+- [AMS AS7265x Triad Spectral Sensor](https://www.sparkfun.com/products/15050) or,
+- [AMS AS726x VIS/NIR Spectral Sensor](https://learn.sparkfun.com/tutorials/as726x-nirvi/all) or,
+- [AMS AS7341 10-Channel Color Sensor](https://learn.adafruit.com/adafruit-as7341-10-channel-light-color-sensor-breakout/arduino)
+- [SparkFun AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) - see note below
+- [SparkFun AS726x Arduino Library](https://github.com/sparkfun/Sparkfun_AS726X_Arduino_Library) - optional
+- [Adafruit_AS7341 Library](https://github.com/adafruit/Adafruit_AS7341) - optional
+- [AS726XX-CommonLib](https://github.com/kchinzei/AS726XX-CommonLib) - wrapper for AS7265x/726x/7341
 - [Arduino core for ESP8266 WiFi chip](https://github.com/esp8266/Arduino)
 - [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer)
 - [ESPAsyncTCP](https://github.com/me-no-dev/ESPAsyncTCP)
@@ -33,15 +37,18 @@ Please note that every AS7265x is calibrated by using typical LEDs illuminating 
 - [Arduino ESP8266 filesystem uploader](https://github.com/esp8266/arduino-esp8266fs-plugin) or equivalent
 - [Chart.min.js](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js)
 
-#### [Feb-03, 2020] Workaround for a bug in [AS7265x Arduino
-Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
+#### [Feb-03, 2020] Workaround for a bug in [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library)
 
 [AS7265x Arduino Library](https://github.com/sparkfun/SparkFun_AS7265x_Arduino_Library) has a bug around the indicator LED that affects its while LED bulb.
 While a bug fix has been pull-requested already, please use [my fix here](https://github.com/kchinzei/SparkFun_AS7265x_Arduino_Library) until the patch to be applied.
 
 #### AS7262/7263 Support
 
-This branch can also work with AS7262/7263 breakout boards. You need to download my [AS726XX-CommonLib](https://github.com/kchinzei/AS726XX-CommonLib) and put AS726XX-CommonLib folder in your Arduino libraries directory.
+It can also work with AS7262/7263 breakout boards. You need to download my [AS726XX-CommonLib](https://github.com/kchinzei/AS726XX-CommonLib) and [SparkFun AS726x Arduino Library](https://github.com/sparkfun/Sparkfun_AS726X_Arduino_Library) put them in your Arduino libraries directory.
+
+#### AS7341 Support
+
+AMS AS7341 is a newer spectral sensor after AS726xx series. It's modernized and a lot affordable than its brothers. You also need to download my [AS726XX-CommonLib](https://github.com/kchinzei/AS726XX-CommonLib) and [Adafruit_AS7341 Library](https://github.com/adafruit/Adafruit_AS7341).
 
 ## Installation
 
@@ -61,7 +68,7 @@ Very simplified flow is like this:
 
 ## To Dos
 
-- AS7265x setting panel (gain, LED brightness indicators)
+- Uploader for a text file containing calibration parameters.
 - [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)
 
 ## References
