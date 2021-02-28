@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Hobby spectroscopy using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide) (and similar AMS sensors), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
+Hobby spectroscope using [SparkFun AS7265x](https://learn.sparkfun.com/tutorials/spectral-triad-as7265x-hookup-guide) (and similar AMS sensors), running web server on ESP8266 ([ESP-WROOM-02](https://www.switch-science.com/catalog/2346/), NodeMCU, etc.).
 
 ![ESP8266-AS7265x-Server](./Artwortks/screenshot.png "Sample screen of ESP8266-AS7265x-Server")
 
@@ -68,7 +68,7 @@ Very simplified flow is like this:
 
 ## To Dos
 
-- Uploader for a text file containing calibration parameters.
+- Uploader for a text file containing custom calibration parameters.
 - [Http update instead of OTA](https://arduino-esp8266.readthedocs.io/en/latest/ota_updates/readme.html#http-server)
 
 ## References

@@ -67,6 +67,8 @@ const char *ssid_2 = "ssid2";
 const char *password_2 = "pssword2";
 #endif
 
+#include <ArduinoJson.h>
+#include <ctype.h>
 #include <time.h>
 
 #include <AS726XX.h> // https://github.com/kchinzei/AS726XX-CommonLib/tree/as7341
@@ -99,10 +101,16 @@ const char *updateLabelsMessage = "updateLabels";
 const char *updateRbtn = "updateRbtn";
 const char *calRbtn = "Cal-";
 const char *gainRbtn = "Gain-";
+const char *cycleRbtn = "Cycle-";
 
 #define C_CAL_CAL '0'
 #define C_CAL_RAW '1'
 #define C_GAIN_1X '0'
+#define C_GAIN_0_5X 'a'
+#define C_CYCLE_1 '0'
+#define C_CYCLE_10 '1'
+#define C_CYCLE_50 '2'
+#define C_CYCLE_100 '3'
 
 /*
  This program runs in two modes, logging mode and idle mode, according to
@@ -116,9 +124,13 @@ int ledUV_toggled = 0;
 int ledWhite_toggled = 0;
 int ledIR_toggled = 0;
 boolean cal_changed = false;
-uint8_t cal = C_CAL_CAL;
+uint8_t c_cal = C_CAL_CAL;
 boolean gain_changed = false;
-uint8_t gain = AS7265X_GAIN_1X + C_GAIN_1X;
+uint8_t gain = AS7265X_GAIN_64X;
+uint8_t c_gain = gain + C_GAIN_1X;
+boolean cycle_changed = false;
+uint8_t c_cycle = C_CYCLE_50;
+uint8_t cycle = 50;
 void start_Logging();
 void end_Logging();
 
@@ -164,23 +176,29 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
         } else if (strncmp((const char *)data, "ToggleIRLEDBtn", len) == 0) {
           ledIR_toggled = 1;
         } else if (strncmp((const char *)data, "init", len) == 0) {
+          notifyConnectedDevice();
           notifyUpdateLabels();
           notifyLoggingStatus();
           notifyLEDBtn(&ledWhite);
           notifyLEDBtn(&ledIR);
           notifyLEDBtn(&ledUV);
-          notifyCalRbtn();
-          notifyGainRbtn();
+          notifyRbtn(calRbtn, c_cal);
+          notifyRbtn(gainRbtn, c_gain);
+          notifyRbtn(cycleRbtn, c_cycle); // FIXME: 9th message not sent.
         } else if (len > strlen(gainRbtn) &&
                    strncmp((const char *)data, gainRbtn, strlen(gainRbtn)) ==
                        0) {
-          gain = data[strlen(gainRbtn)];
+          c_gain = data[strlen(gainRbtn)];
           gain_changed = true;
         } else if (len > strlen(calRbtn) &&
                    strncmp((const char *)data, calRbtn, strlen(calRbtn)) == 0) {
-          cal = data[strlen(calRbtn)];
+          c_cal = data[strlen(calRbtn)];
           cal_changed = true;
-        } else {
+         } else if (len > strlen(cycleRbtn) &&
+                   strncmp((const char *)data, cycleRbtn, strlen(cycleRbtn)) == 0) {
+          c_cycle = data[strlen(cycleRbtn)];
+          cycle_changed = true;
+         } else {
           Serial.printf("uncaught - ws[%s][%u] : '%s'\n", server->url(),
                         client->id(),
                         std::string((const char *)data, len).c_str());
@@ -199,10 +217,30 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
 // https://arduino-esp8266.readthedocs.io/en/latest/filesystem.html#spiffs-file-system-limitations
 String logFilename = "";
 
+char *WebSocketMsg_ConnectedDevice = "connectedDevice";
 char *WebSocketMsg_LoggingStarted = "loggingStarted";
 char *WebSocketMsg_LoggingEnded = "loggingEnded";
 char *WebSocketMsg_EnableDownloadLogFile = "enableDownloadLogfile";
 char *WebSocketMsg_DisableDownloadLogFile = "disableDownloadLogfile";
+
+void notifyConnectedDevice() {
+  String s = WebSocketMsg_ConnectedDevice;
+  uint16_t dNum = sensor.getDeviceNumber();
+  switch (dNum) {
+    case 7262: s += " AS7262"; break;
+    case 7263: s += " AS7263"; break;
+    case 7265: s += " AS7265x"; break;
+    case 7341: s += " AS7341"; break;
+  }
+  webSocket.textAll(s.c_str(), s.length());
+
+  // c_gain needs to be updated.
+  if (dNum == 7341) {
+    c_gain = gain + C_GAIN_0_5X;
+  } else {
+    c_gain = gain + C_GAIN_1X;
+  }
+}
 
 void notifyLoggingStatus() {
   char *payload;
@@ -265,11 +303,6 @@ void start_Logging() {
   fpLogging.write(getLabelsString());
   fpLogging.write((const uint8_t *)"\r\n", strlen("\r\n"));
 
-  // After some experiments it seems that sampling speed isn't fast as expected
-  // by setting it to 1, 9. Reason unclear - because of many tasks in loop()?
-  // sensor.setIntegrationCycles(1);  // 2 integration; 5.6 msec per cycle
-  // sensor.setIntegrationCycles(9);  // 10 integration; 28 msec per cycle
-  sensor.setIntegrationCycles(49); // 50 integration; 140 msec per cycle
   sensor.setMeasurementMode(
       AS7265X_MEASUREMENT_MODE_6CHAN_CONTINUOUS); // All 6 channels on all
                                                   // devices
@@ -285,7 +318,6 @@ void end_Logging() {
   fpLogging.close();
   // Serial.printf("Log %ld samples in file %s\r\n", logging,
   // logFilename.c_str()); listDir();
-  sensor.setIntegrationCycles(49); // 50 integration; 56 msec per cycle
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
   logging = 0;
   notifyLoggingStatus();
@@ -314,15 +346,10 @@ void notifyLEDBtn(AS7265xBulb *bulb) {
           bulb->getCurrentIndex());
   webSocket.textAll(buf, strlen(buf));
 }
-void notifyCalRbtn() {
-  char buf[64];
-  sprintf(buf, "%s %s%c", updateRbtn, calRbtn, cal);
-  webSocket.textAll(buf, strlen(buf));
-}
 
-void notifyGainRbtn() {
+void notifyRbtn(const char *rbtn_id_stem, const char rbtn_id_c) {
   char buf[64];
-  sprintf(buf, "%s %s%c", updateRbtn, gainRbtn, gain);
+  sprintf(buf, "%s %s%c", updateRbtn, rbtn_id_stem, rbtn_id_c);
   webSocket.textAll(buf, strlen(buf));
 }
 
@@ -362,14 +389,29 @@ void sensor_loop() {
       ledIR_toggled = 0;
     }
     if (cal_changed) {
-      notifyCalRbtn();
-      sensor.use_calibrated = (cal == C_CAL_CAL);
+      notifyRbtn(calRbtn, c_cal);
+      sensor.use_calibrated = (c_cal == C_CAL_CAL);
       cal_changed = false;
     }
     if (gain_changed) {
-      sensor.setGain(gain - C_GAIN_1X);
-      notifyGainRbtn();
+      if (isdigit(c_gain))
+        gain = c_gain - C_GAIN_1X;
+      else
+        gain = c_gain - C_GAIN_0_5X;
+      sensor.setGain(gain);
+      notifyRbtn(gainRbtn, c_gain);
       gain_changed = false;
+    }
+    if (cycle_changed) {
+      switch (c_cycle) {
+        case C_CYCLE_1: cycle = 1; break;
+        case C_CYCLE_10: cycle = 10; break;
+        case C_CYCLE_50: cycle = 50; break;
+        case C_CYCLE_100: cycle = 100; break;
+      }
+      sensor.setIntegrationCycles(cycle);
+      notifyRbtn(cycleRbtn, c_cycle);
+      cycle_changed = false;
     }
     // When doing log saving, it stops updating webSocket.
     if ((elapsedIdle > IntervalIdle) && sensor.dataAvailable()) {
@@ -394,9 +436,12 @@ void start_Sensor() {
 
   // Once the sensor is started we can increase the I2C speed
   Wire.setClock(400000);
-  sensor.setIntegrationCycles(
-      49); // 50 integration; 140 msec per cycle, default
-  sensor.setGain(AS7265X_GAIN_64X);                                   // default
+  // After some experiments it seems that sampling speed isn't fast as expected
+  // by setting it to 1, 9. Reason unclear - because of many tasks in loop()?
+  // sensor.setIntegrationCycles(1);  // 2 integration; 5.6 msec per cycle
+  // sensor.setIntegrationCycles(9);  // 10 integration; 28 msec per cycle
+  sensor.setIntegrationCycles(cycle);
+  sensor.setGain(gain);
   sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_ONE_SHOT); // default
 
   sensor.disableIndicator();

@@ -6,12 +6,19 @@ body {
     background-color: black;
 }
 
+h1 {
+  font-weight: inherit;
+  font-size: inherit;
+  text-align: center;
+  margin: 0 0;
+}
+
 /* https://saruwakakun.com/html-css/reference/buttons */
 
 .ui {
   display: inline-block;
-  font-weight: bold;
-  font-size: 1.5rem;
+  font-weight: inherit;
+  font-size: inherit;
   text-decoration: none;
   color: #ffffff;
   background: #808080;
@@ -21,7 +28,6 @@ body {
 }
 
 .button {
-  margin: 0% 3%;
   transition: .4s;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -35,8 +41,14 @@ body {
   background: #606060;
 }
 
-.button-hidden {
-  opacity: 0;
+.button:disabled {
+  color: #404040;
+  background: #202020;
+}
+
+.hidden {
+    visibility: collapse;
+    height: 0;
 }
 
 .m-fadeIn {
@@ -47,11 +59,14 @@ body {
 
 .center {
   display: flex;
-  justify-content:center;
+  justify-content: center;
+  align-items: center;
+  align-self: center;
 }
 
 .rbtn-field {
   display: flex;
+  flex-direction: row;
   overflow: hidden;
 }
 
@@ -73,7 +88,7 @@ body {
   transition: all 0.1s ease-in-out;
 }
 
-.switc-field label:hover {
+.rbtn-field label:hover {
   cursor: pointer;
 }
 
@@ -90,4 +105,4 @@ body {
   border-radius: 0 6px 6px 0;
 }
 
-span.sp5 { letter-spacing: 1rem; }
+span.sp05rem { letter-spacing: 0.5rem; }

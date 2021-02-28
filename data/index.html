@@ -3,20 +3,20 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <link rel="stylesheet" type="text/css" href="/style.css" media="all" />
-    <title>Sensor graph</title>
+    <title>Spectroscope</title>
     <link rel="shortcut icon" href="/favicon.ico" />
   </head>
   <body>
-    <div style="text-align:center;">
-      <b>AS7265x Spectroscopy</b>
-    </div>
+    <h1>
+      Spectroscope
+    </h1>
     <div class="chart-container" position: relative; height:350px; width:100%>
       <canvas id="myChart" width="600" height="400"></canvas>
     </div>
-    <div style="text-align:center;">
+    <div style="text-align:center">
       <p>
         <button id="ToggleLogBtn" class="ui button">Start Logging</button>
-        <button id="DownloadLogfileBtn" class="ui button button-hidden">Download Logfile</button>
+        <button id="DownloadLogfileBtn" class="ui button" disabled>Download Logfile</button>
       </p>
       <p>
         <button id="ToggleUVLEDBtn" class="ui button">UV 0</button>
@@ -30,16 +30,60 @@
           <input type="radio" id="Cal-1" name="calibrate" value="r" />
           <label for="Cal-1" class="ui rbtn-label">Raw</label>
         </form>
-        <span class="sp5">&nbsp;</span>
+        <span class="sp05rem">&nbsp;</span>
+        <button id="UploadCalFileBtn" class="ui button">Upload Calibration</button>
+      </div>
+      <p></p>
+      <div class="center as726xx hidden">
         <form class="rbtn-field">
-          <input type="radio" id="Gain-0" name="amplitude" value="0" checked/>
+          <input type="radio" id="Gain-0" name="amplitude" value="1" checked/>
           <label for="Gain-0" class="ui rbtn-label">x1</label>
-          <input type="radio" id="Gain-1" name="amplitude" value="1" />
+          <input type="radio" id="Gain-1" name="amplitude" value="3.7" />
           <label for="Gain-1" class="ui rbtn-label">x3.7</label>
-          <input type="radio" id="Gain-2" name="amplitude" value="2" />
+          <input type="radio" id="Gain-2" name="amplitude" value="16" />
           <label for="Gain-2" class="ui rbtn-label">x16</label>
-          <input type="radio" id="Gain-3" name="amplitude" value="3" />
+          <input type="radio" id="Gain-3" name="amplitude" value="64" />
           <label for="Gain-3" class="ui rbtn-label">x64</label>
+        </form>
+      </div>
+      <div class="center as7341 hidden rbtn-field">
+        <input type="radio" id="Gain-a" name="amplitude-2" value="0.5" />
+        <label for="Gain-a" class="ui rbtn-label">x0.5</label>
+        <input type="radio" id="Gain-b" name="amplitude-2" value="1" checked/>
+        <label for="Gain-b" class="ui rbtn-label">x1</label>
+        <input type="radio" id="Gain-c" name="amplitude-2" value="2" />
+        <label for="Gain-c" class="ui rbtn-label">x2</label>
+        <input type="radio" id="Gain-d" name="amplitude-2" value="4" />
+        <label for="Gain-d" class="ui rbtn-label">x4</label>
+        <input type="radio" id="Gain-e" name="amplitude-2" value="8" />
+        <label for="Gain-e" class="ui rbtn-label">x8</label>
+        <input type="radio" id="Gain-f" name="amplitude-2" value="16" />
+        <label for="Gain-f" class="ui rbtn-label">x16</label>
+      </div>
+      <div class="center as7341 hidden rbtn-field">
+        <input type="radio" id="Gain-g" name="amplitude-2" value="32" />
+        <label for="Gain-g" class="ui rbtn-label">x32</label>
+        <input type="radio" id="Gain-h" name="amplitude-2" value="64" />
+        <label for="Gain-h" class="ui rbtn-label">x64</label>
+        <input type="radio" id="Gain-i" name="amplitude-2" value="128" />
+        <label for="Gain-i" class="ui rbtn-label">x128</label>
+        <input type="radio" id="Gain-j" name="amplitude-2" value="256" />
+        <label for="Gain-j" class="ui rbtn-label">x256</label>
+        <input type="radio" id="Gain-k" name="amplitude-2" value="512" />
+        <label for="Gain-k" class="ui rbtn-label">x512</label>
+      </div>
+      <p></p>
+      <div class="center">
+        <div>Integration&nbsp;</div>
+        <form class="rbtn-field">
+          <input type="radio" id="Cycle-0" name="cycle" value="1"/>
+          <label for="Cycle-0" class="ui rbtn-label">x1</label>
+          <input type="radio" id="Cycle-1" name="cycle" value="10" />
+          <label for="Cycle-1" class="ui rbtn-label">x10</label>
+          <input type="radio" id="Cycle-2" name="cycle" value="50" checked/>
+          <label for="Cycle-2" class="ui rbtn-label">x50</label>
+          <input type="radio" id="Cycle-3" name="cycle" value="100" />
+          <label for="Cycle-3" class="ui rbtn-label">x100</label>
         </form>
       </div>
     </div>
@@ -82,7 +126,7 @@
         },
         elements: {
           line: {
-            tension: 0.5 // disables bezier curves
+            tension: 0.3 // disables bezier curves
           }
         },
         legend: {
@@ -117,17 +161,44 @@
         ws = new WebSocket(`ws://${window.location.hostname}/ws`);
 
         ws.onmessage = function(evt) {
+          // console.log(`ws: onmessage: ${evt.data}`);
           let args = evt.data.split(' ');
           let arg0 = args[0];
           switch (arg0) {
+          case 'connectedDevice':
+            // Gain radio buttons are different between 7341 and others.
+            let elemToHide = [];
+            let elemToShow = [];
+            // args[1] for device name.
+            switch (args[1]) {
+            case 'AS7341':
+              elemToHide = document.getElementsByClassName('as726xx');
+              elemToShow = document.getElementsByClassName('as7341');
+              break;
+            default:
+              elemToShow = document.getElementsByClassName('as726xx');
+              elemToHide = document.getElementsByClassName('as7341');
+            }
+            for (const e of elemToShow)
+              e.classList.remove('hidden');
+            for (const e of elemToHide)
+              e.classList.add('hidden');
+            // Cosmetic
+            let title = args[1] + ' Spectroscope';
+            document.title = title;
+            let h1List = document.getElementsByTagName("h1");
+            for (const h1 of h1List) {
+              h1.innerHTML = title;
+            }
+            break;
           case 'updateBtn':
-            // arg[1] for id of a button
-            // arg[2...end] is a display text of the button
+            // args[1] for id of a button
+            // args[2...end] is a display text of the button
             let btn = document.getElementById(args[1]);
             btn.innerHTML = args.slice(2).join(' ');
             break;
           case 'updateRbtn':
-            // arg[1] for id of a radio button
+            // args[1] for id of a radio button
             let rbtn = document.getElementById(args[1]);
             rbtn.checked = true;
             break;
@@ -140,10 +211,10 @@
           case 'enableDownloadLogfile':
             let fname = args[1];
             downloadLogfileBtn.href = `${fname}`;
-            downloadLogfileBtn.classList.add("m-fadeIn");
+            downloadLogfileBtn.removeAttribute("disabled");
             break;
           case 'disableDownloadLogfile':
-            downloadLogfileBtn.classList.remove("m-fadeIn");
+            downloadLogfileBtn.setAttribute("disabled", true);
             break;
           case 'updateLabels':
             labelList = args[1].split(',');
