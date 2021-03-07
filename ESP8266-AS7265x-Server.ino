@@ -64,11 +64,9 @@ const char *ssid_1 =
     "ssid"; // The SSID (name) of the Wi-Fi network you want to connect to
 const char *password_1 = "password"; // The password of the Wi-Fi network
 const char *ssid_2 = "ssid2";
-const char *password_2 = "pssword2";
+const char *password_2 = "password2";
 #endif
 
-#include <ArduinoJson.h>
-#include <ctype.h>
 #include <time.h>
 
 #include <AS726XX.h> // https://github.com/kchinzei/AS726XX-CommonLib/tree/as7341
@@ -269,7 +267,7 @@ String getLabelsString() {
     s += sensor.nm[i];
     s += ",";
   }
-  s.remove(s.length() - 1);
+  s.remove(s.length() - 1); // remove extra ',' at the end
   return s;
 }
 
@@ -279,7 +277,7 @@ String getReadingsString() {
     s += String(sensor.readings[i], 2);
     s += ",";
   }
-  s.remove(s.length() - 1);
+  s.remove(s.length() - 1); // remove extra ',' at the end
   return s;
 }
 
@@ -303,9 +301,8 @@ void start_Logging() {
   fpLogging.write(getLabelsString());
   fpLogging.write((const uint8_t *)"\r\n", strlen("\r\n"));
 
-  sensor.setMeasurementMode(
-      AS7265X_MEASUREMENT_MODE_6CHAN_CONTINUOUS); // All 6 channels on all
-                                                  // devices
+  // All 6 channels on all devices
+  sensor.setMeasurementMode(AS7265X_MEASUREMENT_MODE_6CHAN_CONTINUOUS); 
 
   elapsedLogtime = 0;
   logging = 1;
@@ -427,11 +424,9 @@ void sensor_loop() {
 }
 
 void start_Sensor() {
-  if (sensor.begin() == false) {
-    Serial.println("Sensor does not appear to be connected. Please check "
-                   "wiring. Freezing...");
-    while (1)
-      ;
+  while (sensor.begin() == false) {
+    Serial.println("Sensor does not appear to be connected. Please check wiring.");
+    delay(1000);
   }
 
   // Once the sensor is started we can increase the I2C speed
@@ -448,6 +443,24 @@ void start_Sensor() {
   ledUV.init(&sensor, AS7265x_LED_UV, AS7265X_LED_CURRENT_LIMIT_12_5MA);
   ledWhite.init(&sensor, AS7265x_LED_WHITE, AS7265X_LED_CURRENT_LIMIT_25MA);
   ledIR.init(&sensor, AS7265x_LED_IR, AS7265X_LED_CURRENT_LIMIT_25MA);
+  init_calibration();
+}
+
+#include "calibration_constants.h"
+
+void init_calibration() {
+  uint16_t dNum = sensor.getDeviceNumber();
+  switch (dNum) {
+    case 7265:
+      for (int i=0; i<sensor.maxCh; i++)
+        sensor.cal_params[i] = CalParams7265x[i];
+      break;
+      break;
+    case 7341:
+      for (int i=0; i<sensor.maxCh; i++)
+        sensor.cal_params[i] = CalParams7341[i];
+      break;
+  }
 }
 
 // Other startup routines.

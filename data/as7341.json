@@ -1,0 +1,41 @@
+{
+  "device": "AS7341",
+  "calibration": [
+    {
+      "wavelength": "415",
+      "ratio": "6.054618363"
+    },
+    {
+      "wavelength": "445",
+      "ratio": "3.299449928"
+    },
+    {
+      "wavelength": "480",
+      "ratio": "2.648300472"
+    },
+    {
+      "wavelength": "515",
+      "ratio": "2.060079981"
+    },
+    {
+      "wavelength": "555",
+      "ratio": "1.709161169"
+    },
+    {
+      "wavelength": "590",
+      "ratio": "1.532353456"
+    },
+    {
+      "wavelength": "630",
+      "ratio": "1.318766377"
+    },
+    {
+      "wavelength": "680",
+      "ratio": "1"
+    },
+    {
+      "wavelength": "910",
+      "ratio": "2.494843599"
+    }
+  ]
+}
